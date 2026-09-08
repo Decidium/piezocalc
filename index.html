@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Piezo Calc">
-<title>Pore Pressure Calculator</title>
+<title>PiezoCalc</title>
 <style>
 /* ============================================================
    Design tokens
@@ -76,13 +76,12 @@ body{
 .brand{display:flex;align-items:center;gap:10px;min-width:0}
 .brand-mark{
   width:34px;height:34px;border-radius:10px;flex:0 0 auto;
-  background:linear-gradient(145deg,var(--primary),#7c5cff);
-  display:grid;place-items:center;color:#fff;font-weight:800;font-size:.82rem;letter-spacing:.5px;
+  object-fit:cover;
   box-shadow:0 4px 14px -4px rgba(79,140,255,.65);
 }
 .brand-txt{min-width:0}
 .brand-txt h1{font-size:.94rem;font-weight:700;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.brand-txt span{display:block;font-size:.7rem;color:var(--muted)}
+.brand-txt span{display:block;font-size:.7rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chips{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .chip{
   display:inline-flex;align-items:center;gap:5px;
@@ -450,10 +449,10 @@ textarea{min-height:86px;resize:vertical;font-size:.9rem}
 <header class="appbar">
   <div class="appbar-in">
     <div class="brand">
-      <div class="brand-mark">VW</div>
+      <img class="brand-mark" src="./ppc-icon-192.png" alt="PiezoCalc" width="34" height="34">
       <div class="brand-txt">
-        <h1>Pore Pressure Calculator</h1>
-        <span>Vibrating wire piezometers</span>
+        <h1>PiezoCalc</h1>
+        <span>A tool for simplifying piezometer installations</span>
       </div>
     </div>
     <div class="chips" id="sb">
