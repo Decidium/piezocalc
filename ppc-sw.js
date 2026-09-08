@@ -1,7 +1,8 @@
 // Offline shell for the pore pressure calculator. Bump CACHE on every release.
-const CACHE = 'ppc-v11-1';
+const CACHE = 'ppc-1';
 const ASSETS = [
-  './pore_pressure_calculator_v11.html',
+  './',
+  './index.html',
   './ppc-manifest.webmanifest',
   './ppc-icon-192.png',
   './ppc-icon-512.png',

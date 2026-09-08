@@ -3,7 +3,7 @@
   "short_name": "Piezo Calc",
   "description": "Vibrating wire piezometer readings, installation planning and grouting calculations.",
   "id": "/pore-pressure-calculator/",
-  "start_url": "./pore_pressure_calculator_v11.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
@@ -18,12 +18,12 @@
   "shortcuts": [
     {
       "name": "Reading sheet",
-      "url": "./pore_pressure_calculator_v11.html#read",
+      "url": "./index.html#read",
       "icons": [{ "src": "./ppc-icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Site notes",
-      "url": "./pore_pressure_calculator_v11.html#notes",
+      "url": "./index.html#notes",
       "icons": [{ "src": "./ppc-icon-192.png", "sizes": "192x192" }]
     }
   ]

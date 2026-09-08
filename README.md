@@ -1,139 +1,161 @@
 # PiezoCalc
 
-PiezoCalc is an installable Progressive Web App (PWA) for vibrating wire
-piezometer (VWP) pore pressure calculation. It is a browser-based sibling of
-the [CLI Pore Pressure Calculator](../CLI-Pore-Pressure-Calculator), and is
-the more feature-rich of the two: it supports **four** calibration equation
-variants (versus the CLI's two) and adds rated-pressure warning bands that
-flag when a reading is approaching or exceeding a sensor's rated pressure.
+PiezoCalc (the **Pore Pressure Calculator**) is an installable Progressive Web
+App (PWA) for the full field workflow around vibrating wire piezometers (VWP):
+planning an installation, designing the grout, converting sensor calibration
+sheets into pressures, taking and logging readings, and keeping a site diary.
 
-The whole app is a single self-contained HTML file
-(`pore_pressure_calculator_v11.html`) plus a manifest and service worker that
-make it installable on a phone or desktop like a native app.
+The whole app is a single self-contained file (`index.html`) with inline
+CSS/JS and no external network calls. A web manifest and service worker make
+it installable on a phone or desktop and fully usable offline once loaded.
+All data lives in the browser's `localStorage` on the device — nothing is sent
+anywhere.
 
-## Running it locally
+## Running it
 
-You need Node.js (any reasonably recent version) only to serve the files —
-there is no build step and no other dependency.
+It is hosted on GitHub Pages at
+**<https://decidium.github.io/piezocalc/>** — open that on a phone or desktop
+and use the browser's *Install* / *Add to Home Screen* prompt for an app-like
+icon and offline use.
 
-```
-node ppc-serve.js
-```
-
-Optionally pass a port number (defaults to `8080`):
-
-```
-node ppc-serve.js 3000
-```
-
-The server prints a local URL and a network URL, e.g.:
+To run it locally instead you only need Node.js (no build step, no
+`npm install` — the server uses Node's built-in modules only):
 
 ```
-Serving <this folder>
-  local:   http://localhost:8080/
-  network: http://192.168.1.23:8080/   (open this on the phone)
+node ppc-serve.js          # serves on http://localhost:8080/
+node ppc-serve.js 3000      # ...or on a chosen port
 ```
 
-Open the `local` URL on the same machine, or the `network` URL from a phone
-or other device on the same Wi-Fi/LAN. Because the app ships a
-`ppc-manifest.webmanifest` and a service worker (`ppc-sw.js`), the browser
-will offer an "Install" / "Add to Home Screen" prompt — installing it gives
-you an app-like icon and (after the first load) offline use.
+The server prints a `local` URL for the same machine and a `network` URL to
+open from a phone on the same Wi-Fi/LAN.
+
+## What it does
+
+The app is organised around an **installation** (identified by a logger or
+borehole ID). Everything below is stored per installation and the navigation
+bar switches between the main areas.
+
+### Installations & sensors (Setup)
+
+- Create a new installation or reopen a recent one; a **Setup** screen lists
+  recently used installation IDs.
+- Manage the **sensor list** for the installation: each sensor carries its
+  piezo ID, calibration equation and coefficients, zero reading (`R0`/`T0`),
+  `equation_units` (Hz or digits) and an optional `rated_pressure_kpa`.
+- **Import / export** the sensor set as JSON so a calibrated installation can
+  be moved between devices or archived.
+
+### Calibration equations
+
+Four named calibration variants are supported, matching the forms found on
+manufacturer sheets:
+
+| Variant | Formula |
+|---|---|
+| **Linear A** | `P = G·(R0 − Ri) + K·(Ti − T0) + D` |
+| **Linear B** | `P = G·(Ri − R0) + K·(Ti − T0) + D` |
+| **Polynomial A** | `P = A·Ri² + B·Ri + C + K·(Ti − T0) + D` |
+| **Polynomial B** | `P = (A·Ri² + B·Ri + C) − (A·R0² + B·R0 + C) + K·(Ti − T0) + D` |
+
+`Ri`/`R0` are evaluated in whichever unit the sensor's `equation_units`
+specifies. Bare `linear` / `polynomial` are accepted as legacy aliases for
+`linear_a` / `polynomial_a`. Temperature comes from the reading in °C, or is
+derived from thermistor resistance via the 5 kΩ Steinhart-Hart model.
+
+### Taking readings
+
+- **Single reading** for the active sensor: enter frequency (Hz or digits) and
+  temperature (°C or thermistor ohms); the pressure, head and a live preview
+  are shown, then logged with an optional comment and timestamp.
+- **Reading sheet** for every sensor at once, organised into numbered
+  **rounds**. Tab across the grid to fill it in, add one comment for the round
+  or per-piezo comments, and log the whole sheet in one action. Rows are
+  colour-banded against each sensor's rated pressure.
+- **Field zero**: re-establish a sensor's `R0`/`T0` from a fresh reading, with
+  a preview of the effect before you confirm.
+
+### Rated-pressure warning bands
+
+For any sensor with a `rated_pressure_kpa`, each result is classified by
+`P / rated`:
+
+| `P / rated` | Label |
+|---|---|
+| `< 80%` | under 80% of rated |
+| `≥ 80%` | approaching rated |
+| `≥ 100%` | over rated |
+| `≥ 125%` | over 1.25× rated |
+| `≥ 150%` | OVER 1.5× rated |
+
+### Overpressure check
+
+Back-solves each sensor's own calibration equation (linear or polynomial) to
+report the reading — in digits and Hz, plus equivalent head — that corresponds
+to the rated pressure and to chosen multiples of it, so a datalogger alarm
+threshold can be set before deployment.
+
+### Readings log
+
+Per-sensor table of every logged reading with view, **CSV export** and clear.
+The home screen also shows the latest reading per piezo and a pore-pressure
+vs. time chart. Existing readings can be **imported from CSV**.
+
+### Unit converter
+
+Grouped conversions with adjustable decimal places:
+
+- **Pressure**: kPa, hPa, bar, psi, atm, mmHg, mH2O, ftH2O, inH2O
+- **Gauge / temperature factors**: `… / digit` and `… / °C` in psi, kPa, hPa,
+  bar, mH2O
+- **Vibrating wire**: Hz, digits (`Hz² / 1000`), period (ms)
+- **Thermistor**: 5 kΩ ohms ↔ °C (Steinhart-Hart)
+- **Temperature**: °C, °F, K
+
+### Installation planner
+
+Plans the physical string in the borehole:
+
+- Borehole depth/diameter, galv trimmy piece length, stickup, toe depth and
+  piece numbering direction.
+- Any number of alcathene trimmy lines, plus an annular-fit check against the
+  borehole.
+- Piezometer target depths (add rows, space evenly, or clear).
+- Produces an **installation schedule** (each piezo's depth, which trimmy
+  piece it falls on, distance from that piece's toe/top and the nearest joint,
+  with a joint-clearance warning) exportable as CSV, and a scaled
+  **installation drawing** you can download as SVG or print to PDF.
+
+### Grouting
+
+- **Borehole volume**: annulus between the hole and the galv trimmy over the
+  grouted interval, less alcathene and other displacement, plus a
+  wastage/overbreak allowance. Geometry can be imported from the planner.
+- **Bentonite-cement mix design**: presets (Mikkelsen & Green Mix A / Mix B,
+  a stiff cement-bentonite W/C 1.5, a 6 % bentonite slurry) or a custom batch.
+  Scales the batch to a target grout volume, either rounding up to whole
+  batches or scaling exactly, and reports water / cement / bentonite
+  quantities and whole bag counts, with mixing-order guidance.
+
+### Site notes
+
+A single timestamped diary for the whole installation — free-text entries with
+date/time, shown newest-first and grouped by day, with export. Recent notes
+also surface on the home screen.
 
 ## Requirements
 
-- Node.js, to run the tiny static file server in `ppc-serve.js` (it only uses
-  Node's built-in `http`, `fs`, `path`, `os` modules — no `npm install`
-  needed).
-- Nothing else. The app itself is a single HTML file with inline CSS/JS; no
-  external network calls or CDN dependencies at runtime.
+- **To use it**: any modern browser. Nothing to install beyond the optional
+  *Add to Home Screen*.
+- **To serve it locally**: Node.js, for the small static file server in
+  `ppc-serve.js` (built-in `http`, `fs`, `path`, `os` only).
+- No runtime dependencies, CDNs or network calls.
 
-## Physics / Equations
+## Files
 
-All formulas and thresholds below were confirmed directly against the JS in
-`pore_pressure_calculator_v11.html`.
-
-### Steinhart-Hart thermistor equation (Ohms → °C)
-
-```js
-function ohms2c(R, A, B, C) {
-  A = A||DA; B = B||DB; C = C||DC;
-  if (R <= 0) return NaN;
-  const l = Math.log(R);
-  return 1/(A + B*l + C*l*l*l) - 273.15;
-}
-```
-i.e. `T(°C) = 1 / (A + B·ln(R) + C·ln(R)³) − 273.15`, using the `−273.15`
-Kelvin→Celsius offset. Default coefficients (`DA`, `DB`, `DC`):
-
-```js
-const DA = 1.4051e-3, DB = 2.369e-4, DC = 1.019e-7;
-```
-
-### Frequency ↔ digits
-
-```js
-function hz2dig(hz) { return hz*hz/1000; }
-function dig2hz(d)  { return Math.sqrt(d*1000); }
-```
-i.e. `digits = Hz² / 1000` and `Hz = sqrt(digits × 1000)`.
-
-### Equation variants (`EQS` object)
-
-PiezoCalc supports four named calibration equation variants, each with its
-own formula and note exactly as defined in the code:
-
-```js
-const EQS = {
-  linear_a:     {label:'Linear A',     kind:'linear',
-                 formula:'P = G × (R0 − Ri) + K × (Ti − T0) + D',
-                 note:'Standard vibrating wire form. Pressure is referenced to the zero reading R0.'},
-  linear_b:     {label:'Linear B',     kind:'linear',
-                 formula:'P = G × (Ri − R0) + K × (Ti − T0) + D',
-                 note:'As Linear A but with the reading difference reversed (positive gauge factor sheets).'},
-  polynomial_a: {label:'Polynomial A', kind:'poly',
-                 formula:'P = A·Ri² + B·Ri + C + K × (Ti − T0) + D',
-                 note:'Absolute polynomial. The calibration constant C sets the datum; R0 is not subtracted.'},
-  polynomial_b: {label:'Polynomial B', kind:'poly',
-                 formula:'P = (A·Ri² + B·Ri + C) − (A·R0² + B·R0 + C) + K × (Ti − T0) + D',
-                 note:'Zero-referenced polynomial. The polynomial is also evaluated at R0 and subtracted.'}
-};
-```
-
-Symbols, as used across all four variants:
-- `G` — linear gauge factor
-- `R0` — zero-reading reference value (in whichever unit `equation_units`
-  specifies — Hz or digits; see below)
-- `Ri` — current reading, in the same unit as `R0`
-- `K` — temperature coefficient
-- `Ti` — current temperature, °C
-- `T0` — temperature at the zero reading, °C
-- `D` — offset
-- `A`, `B`, `C` — polynomial coefficients (`poly_coefficient_A/B/C`)
-
-Note that unlike the CLI tool's polynomial equation, PiezoCalc's Polynomial A
-and Polynomial B variants both include the `+ D` offset term. Also note that
-`Ri`/`R0` here are evaluated in whichever unit the sensor's `equation_units`
-field specifies (`hertz` or `digits`) — see `eqVal`/`eqUnits` in
-`pFromDigits()` — not fixed to digits as in the CLI tool's polynomial form.
-
-`linear`/`polynomial` (without a suffix) are accepted as legacy aliases and
-normalized to `linear_a` / `polynomial_a` respectively (`normEq()`).
-
-### Rated-pressure warning bands (`ratedInfo()`)
-
-For a sensor with a configured `rated_pressure_kpa`, PiezoCalc computes
-`pct = P / rated × 100` and classifies the current reading:
-
-| Threshold (`pct`) | Label | CSS class |
-|---|---|---|
-| `< 80%` | under 80% of rated | `p-ok` |
-| `>= 80%` | approaching rated | `p-near` |
-| `>= 100%` | over rated | `p-warn` |
-| `>= 125%` | over 1.25x rated | `p-over` |
-| `>= 150%` | OVER 1.5x rated | `p-crit` |
-
-(Thresholds are checked from highest to lowest in the code, so a reading at,
-say, 160% of rated is reported as "OVER 1.5x rated", not any of the lower
-bands.) If no `rated_pressure_kpa` is configured for a sensor, `ratedInfo()`
-returns `null` and no banding is shown.
+| File | Purpose |
+|---|---|
+| `index.html` | the entire application (HTML + inline CSS/JS) |
+| `ppc-manifest.webmanifest` | PWA manifest (name, icons, shortcuts) |
+| `ppc-sw.js` | service worker — offline cache of the app shell |
+| `ppc-icon-*.png` | app icons (192, 512, maskable 512) |
+| `ppc-serve.js` | zero-dependency static server for local use |

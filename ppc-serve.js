@@ -7,7 +7,7 @@ const os = require('os');
 
 const PORT = Number(process.argv[2]) || 8080;
 const ROOT = __dirname;
-const APP = 'pore_pressure_calculator_v11.html';
+const APP = 'index.html';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',

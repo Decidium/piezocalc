@@ -2,16 +2,3346 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0b0f16">
 <link rel="manifest" href="./ppc-manifest.webmanifest">
 <link rel="icon" href="./ppc-icon-192.png" sizes="192x192">
-<link rel="canonical" href="./pore_pressure_calculator_v11.html">
-<meta http-equiv="refresh" content="0; url=./pore_pressure_calculator_v11.html">
+<link rel="apple-touch-icon" href="./ppc-icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Piezo Calc">
 <title>Pore Pressure Calculator</title>
+<style>
+/* ============================================================
+   Design tokens
+   ============================================================ */
+:root{
+  --bg:#0b0f16;
+  --surface:#121824;
+  --surface-2:#18202e;
+  --surface-3:#1f2937;
+  --outline:#2b3648;
+  --outline-var:#1d2634;
+  --on-surface:#e6edf7;
+  --on-surface-var:#93a4bd;
+  --muted:#64748b;
+
+  --primary:#4f8cff;
+  --primary-dim:#1d4ed8;
+  --on-primary:#ffffff;
+  --primary-cont:#15294d;
+
+  --success:#22c55e;
+  --success-dim:#0f7a45;
+  --success-cont:#0c2a1e;
+
+  --warn:#f5a524;
+  --warn-dim:#a35c07;
+  --warn-cont:#2e1e07;
+
+  --danger:#f26d6d;
+  --danger-dim:#b91c1c;
+  --danger-cont:#2c1113;
+
+  --r-sm:8px; --r:12px; --r-lg:16px; --r-pill:999px;
+  --sp:8px;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  --mono:ui-monospace,"Cascadia Mono",Consolas,"SF Mono",monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  background:
+    radial-gradient(1200px 500px at 50% -260px, #16233a 0%, rgba(22,35,58,0) 70%),
+    var(--bg);
+  background-attachment:fixed;
+  color:var(--on-surface);
+  min-height:100vh;line-height:1.5;font-size:15px;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom));
+}
+#app{max-width:880px;margin:0 auto;padding:0 16px 32px}
+
+/* ============================================================
+   App bar + status
+   ============================================================ */
+.appbar{
+  position:sticky;top:0;z-index:60;
+  background:rgba(11,15,22,.82);
+  backdrop-filter:saturate(160%) blur(14px);
+  border-bottom:1px solid var(--outline-var);
+}
+.appbar-in{max-width:880px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand-mark{
+  width:34px;height:34px;border-radius:10px;flex:0 0 auto;
+  background:linear-gradient(145deg,var(--primary),#7c5cff);
+  display:grid;place-items:center;color:#fff;font-weight:800;font-size:.82rem;letter-spacing:.5px;
+  box-shadow:0 4px 14px -4px rgba(79,140,255,.65);
+}
+.brand-txt{min-width:0}
+.brand-txt h1{font-size:.94rem;font-weight:700;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand-txt span{display:block;font-size:.7rem;color:var(--muted)}
+.chips{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.chip{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--surface-2);border:1px solid var(--outline-var);
+  border-radius:var(--r-pill);padding:3px 10px;font-size:.72rem;color:var(--on-surface-var);
+  white-space:nowrap;
+}
+.chip b{color:var(--primary);font-weight:600}
+#sb{display:none}
+#sb.on{display:flex}
+
+/* Unit bar */
+.unitbar{
+  position:sticky;top:0;z-index:55;
+  background:rgba(11,15,22,.82);
+  backdrop-filter:saturate(160%) blur(14px);
+  border-bottom:1px solid var(--outline-var);
+}
+.unitbar-in{
+  max-width:880px;margin:0 auto;padding:8px 16px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.unitbar .seg button{padding:5px 12px;font-size:.75rem}
+
+/* ============================================================
+   Views + layout
+   ============================================================ */
+.view{display:none;padding:16px 0 8px;animation:fade .18s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.page-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.page-head h2{font-size:1.15rem;font-weight:700;letter-spacing:-.01em;flex:1;min-width:0}
+.page-head .sub{display:block;font-size:.74rem;color:var(--muted);font-weight:400;letter-spacing:0}
+
+.card{
+  background:var(--surface);
+  border:1px solid var(--outline-var);
+  border-radius:var(--r-lg);
+  padding:16px;margin-bottom:14px;
+  box-shadow:var(--shadow);
+}
+.card.flush{padding:0;overflow:hidden}
+.card-title{
+  display:flex;align-items:center;gap:8px;
+  font-size:.72rem;font-weight:700;color:var(--on-surface-var);
+  text-transform:uppercase;letter-spacing:.09em;
+  margin-bottom:14px;
+}
+.card-title::after{content:"";flex:1;height:1px;background:var(--outline-var)}
+.card-title .n{
+  display:grid;place-items:center;width:20px;height:20px;border-radius:6px;
+  background:var(--primary-cont);color:var(--primary);font-size:.7rem;
+}
+.hint{font-size:.76rem;color:var(--muted);margin-top:8px;line-height:1.45}
+hr{border:none;border-top:1px solid var(--outline-var);margin:16px 0}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 16px;border:1px solid transparent;border-radius:var(--r);
+  font-family:inherit;font-size:.88rem;font-weight:600;cursor:pointer;
+  transition:background .15s,border-color .15s,transform .06s,filter .15s;
+  width:100%;text-align:center;
+}
+.btn+.btn{margin-top:8px}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.btn-primary{background:var(--primary);color:var(--on-primary)}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-tonal{background:var(--primary-cont);color:#a9c9ff;border-color:#22406e}
+.btn-tonal:hover{background:#1a3565}
+.btn-success{background:var(--success-dim);color:#d7ffe9}
+.btn-success:hover{filter:brightness(1.15)}
+.btn-warn{background:var(--warn-dim);color:#ffe9c2}
+.btn-warn:hover{filter:brightness(1.15)}
+.btn-danger{background:var(--danger-dim);color:#ffe0e0}
+.btn-danger:hover{filter:brightness(1.15)}
+.btn-neutral{background:var(--surface-3);color:#cbd5e1;border-color:var(--outline)}
+.btn-neutral:hover{background:#273244}
+.btn-ghost{background:transparent;color:var(--on-surface-var);border-color:var(--outline)}
+.btn-ghost:hover{background:var(--surface-2);color:var(--on-surface)}
+.btn-sm{padding:7px 12px;font-size:.78rem;width:auto;border-radius:var(--r-sm)}
+.btn-sm+.btn-sm{margin-top:0}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+.btn-row .btn{width:auto}
+
+/* Tile grid (menu) */
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.tiles .full{grid-column:1/-1}
+.tile{
+  display:flex;gap:11px;align-items:flex-start;text-align:left;
+  background:var(--surface-2);border:1px solid var(--outline-var);
+  border-radius:var(--r);padding:13px;cursor:pointer;
+  transition:border-color .15s,background .15s,transform .06s;
+  color:inherit;font-family:inherit;width:100%;
+}
+.tile:hover{border-color:var(--outline);background:var(--surface-3)}
+.tile:active{transform:translateY(1px)}
+.tile:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.tile .ico{
+  flex:0 0 auto;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;
+  background:var(--primary-cont);color:var(--primary);font-size:.9rem;font-weight:700;
+}
+.tile.accent .ico{background:#0f3b2a;color:#4ade80}
+.tile.warnish .ico{background:var(--warn-cont);color:var(--warn)}
+.tile .tt{display:block;font-size:.87rem;font-weight:650;line-height:1.25}
+.tile .ts{display:block;font-size:.72rem;color:var(--muted);margin-top:2px;line-height:1.3}
+
+/* ============================================================
+   Forms
+   ============================================================ */
+.fg{margin-bottom:12px}
+.fg:last-child{margin-bottom:0}
+.fg label{display:block;font-size:.75rem;font-weight:600;color:var(--on-surface-var);margin-bottom:5px;letter-spacing:.01em}
+.fg .req{color:var(--danger)}
+.fg .opt{color:var(--muted);font-weight:400}
+input,select,textarea{
+  width:100%;font-family:inherit;font-size:.92rem;color:var(--on-surface);
+  background:var(--surface-2);
+  border:1px solid var(--outline);border-radius:var(--r-sm);
+  padding:10px 12px;transition:border-color .15s,box-shadow .15s,background .15s;
+}
+input::placeholder{color:#556377}
+input:hover,select:hover{border-color:#374357}
+input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,140,255,.18);background:var(--surface)}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--on-surface-var) 50%),linear-gradient(135deg,var(--on-surface-var) 50%,transparent 50%);background-position:calc(100% - 17px) 50%,calc(100% - 12px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:34px}
+input[type=number]{-moz-appearance:textfield}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.frow3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+
+/* Segmented control */
+.seg{display:inline-flex;background:var(--surface-3);border:1px solid var(--outline);border-radius:var(--r-sm);padding:3px;gap:3px}
+.seg button{
+  border:none;background:transparent;color:var(--on-surface-var);
+  font-family:inherit;font-size:.78rem;font-weight:600;padding:6px 14px;
+  border-radius:6px;cursor:pointer;transition:background .15s,color .15s;
+}
+.seg button:hover{color:var(--on-surface)}
+.seg button.on{background:var(--primary);color:#fff}
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;border-bottom:1px solid var(--outline-var)}
+.switch-row:last-of-type{border-bottom:none}
+.switch-row .sl{font-size:.9rem;font-weight:600}
+.switch-row .ss{font-size:.74rem;color:var(--muted)}
+
+/* ============================================================
+   Alerts + results
+   ============================================================ */
+.al{padding:11px 14px;border-radius:var(--r);margin-bottom:12px;font-size:.84rem;line-height:1.45;border:1px solid}
+.al:last-child{margin-bottom:0}
+.al-info{background:var(--primary-cont);border-color:#27477a;color:#c3dbff}
+.al-ok{background:var(--success-cont);border-color:#16613f;color:#a9f0c9}
+.al-warn{background:var(--warn-cont);border-color:#7a4a09;color:#fbdba7}
+.al-err{background:var(--danger-cont);border-color:#7f2222;color:#ffc9c9}
+
+.kv{background:#0a0e15;border:1px solid var(--outline-var);border-radius:var(--r);padding:6px 14px;font-family:var(--mono);font-size:.82rem}
+.kv .row{display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-bottom:1px solid #131a26}
+.kv .row:last-child{border-bottom:none}
+.kv .k{color:var(--muted);font-family:inherit}
+.kv .v{color:var(--on-surface);font-weight:600;text-align:right}
+.kv .v.hi{color:#5fe3a1}
+.kv .v.big{color:var(--primary);font-size:1.02rem}
+.kv .row.sep{border-top:1px solid var(--outline-var);margin-top:4px;padding-top:9px}
+
+/* ============================================================
+   Tables
+   ============================================================ */
+.twrap{overflow-x:auto;border:1px solid var(--outline-var);border-radius:var(--r)}
+.tbl{width:100%;border-collapse:collapse;font-size:.79rem}
+.tbl th{
+  position:sticky;top:0;background:var(--surface-2);color:var(--on-surface-var);
+  padding:9px 10px;text-align:left;white-space:nowrap;font-weight:650;
+  border-bottom:1px solid var(--outline);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;
+}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--outline-var);color:#cfdbea;white-space:nowrap}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:var(--surface-2)}
+.tbl input{padding:6px 8px;font-size:.82rem;border-radius:6px;min-width:96px}
+.tbl input.wide{min-width:150px}
+.tbl td.out{font-family:var(--mono);font-weight:600;color:var(--on-surface-var)}
+.tbl td.out.kpa{color:#5fe3a1}
+.tbl td.pz{font-weight:650;color:var(--on-surface)}
+#ms-table.no-rc th:nth-child(8),#ms-table.no-rc td:nth-child(8){display:none}
+
+/* Pressure vs rated status */
+.p-ok{color:#5fe3a1}
+.p-near{color:#e7d94f}
+.p-warn{color:#f5a524}
+.p-over{color:#fb7185}
+.p-crit{color:#ff5a5a;font-weight:800}
+.pct{font-size:.72rem;color:var(--muted);font-weight:500;margin-left:6px}
+.keyrow{display:flex;gap:14px;flex-wrap:wrap;font-size:.72rem;color:var(--muted);margin-top:10px}
+.keyrow span{display:inline-flex;align-items:center;gap:5px}
+.keyrow i{width:9px;height:9px;border-radius:3px;display:inline-block;background:currentColor}
+.mainfield{
+  background:var(--primary-cont);border:1px solid #27477a;border-radius:var(--r);
+  padding:12px 14px;margin-bottom:14px;
+}
+.mainfield label{display:block;font-size:.78rem;font-weight:700;color:#a9c9ff;margin-bottom:6px}
+.mainfield input{background:#0d1626;border-color:#2c4f86;font-size:.95rem}
+.mainfield .sub{font-size:.72rem;color:#7f9fd0;margin-top:6px}
+.caltbl{width:100%;font-size:.82rem;border-collapse:collapse}
+.caltbl td{padding:6px 0;border-bottom:1px solid var(--outline-var)}
+.caltbl td:first-child{color:var(--on-surface-var);width:56%}
+.caltbl td:last-child{font-family:var(--mono);font-weight:600;text-align:right}
+
+/* ============================================================
+   List items
+   ============================================================ */
+.item{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;
+  border:1px solid var(--outline-var);border-radius:var(--r);margin-bottom:8px;
+  cursor:pointer;background:var(--surface-2);transition:border-color .15s,background .15s;
+}
+.item:last-child{margin-bottom:0}
+.item:hover{border-color:var(--outline)}
+.item.on{border-color:var(--success-dim);background:var(--success-cont)}
+.item .num{
+  flex:0 0 auto;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;
+  background:var(--surface-3);color:var(--on-surface-var);font-size:.76rem;font-weight:700;
+}
+.item.on .num{background:var(--success-dim);color:#fff}
+.item .body{flex:1;min-width:0}
+.item .t{font-weight:650;font-size:.9rem;display:flex;align-items:center;gap:6px}
+.item .m{font-size:.73rem;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis}
+.badge{display:inline-block;padding:1px 7px;border-radius:var(--r-pill);font-size:.67rem;font-weight:700;background:var(--primary-cont);color:#8fb8ff;letter-spacing:.02em}
+.badge.ok{background:var(--success-cont);color:#5fe3a1}
+
+/* Round header */
+.roundbar{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--primary-cont);border:1px solid #27477a;border-radius:var(--r);
+  padding:10px 14px;margin-bottom:12px;
+}
+.roundbar .l{font-size:.84rem;font-weight:700;color:#a9c9ff}
+.roundbar .r{font-size:.76rem;color:var(--on-surface-var);font-family:var(--mono)}
+
+/* ============================================================
+   Planner-specific rows
+   ============================================================ */
+.prow{display:grid;grid-template-columns:1.1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px}
+.prow .fg{margin-bottom:0}
+.arow{display:grid;grid-template-columns:auto 1fr 1fr 1.1fr;gap:8px;align-items:end;margin-bottom:8px}
+.arow .fg{margin-bottom:0}
+.alab{font-size:.76rem;font-weight:600;color:var(--on-surface-var);padding-bottom:11px;min-width:84px}
+.xbtn{
+  height:39px;width:39px;flex:0 0 auto;border:1px solid #5c2222;background:var(--danger-cont);
+  color:#ff9d9d;border-radius:var(--r-sm);cursor:pointer;font-size:1rem;line-height:1;
+}
+.xbtn:hover{background:#3d1618;color:#fff}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.svgwrap{background:#080b11;border:1px solid var(--outline-var);border-radius:var(--r);padding:8px;overflow-x:auto}
+.svgwrap svg{display:block;margin:0 auto;max-width:100%;height:auto}
+
+/* Converter */
+.convgrid{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:end}
+.swapbtn{
+  width:46px;height:46px;border-radius:var(--r-pill);border:1px solid var(--outline);
+  background:var(--surface-3);color:var(--primary);font-size:1.2rem;cursor:pointer;
+  transition:transform .2s,background .15s;align-self:center;margin-bottom:4px;
+}
+.swapbtn:hover{background:var(--primary-cont);transform:rotate(180deg)}
+.readonly{background:#0a0e15;color:#5fe3a1;font-family:var(--mono);font-weight:700}
+@media(max-width:560px){
+  .convgrid{grid-template-columns:1fr}
+  .swapbtn{width:100%;border-radius:var(--r-sm);height:38px;transform:none}
+  .swapbtn:hover{transform:none}
+}
+
+/* Notes */
+.daygroup{margin-bottom:16px}
+.daygroup:last-child{margin-bottom:0}
+.dayhead{
+  display:flex;align-items:center;gap:8px;margin-bottom:8px;
+  font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary);
+}
+.dayhead::after{content:"";flex:1;height:1px;background:var(--outline-var)}
+.note{
+  display:flex;gap:12px;padding:10px 12px;border:1px solid var(--outline-var);
+  border-radius:var(--r);background:var(--surface-2);margin-bottom:8px;
+}
+.note .time{font-family:var(--mono);font-size:.76rem;color:var(--primary);flex:0 0 auto;padding-top:1px}
+.note .txt{flex:1;font-size:.86rem;white-space:pre-wrap;word-break:break-word}
+.note .del{
+  flex:0 0 auto;background:none;border:none;color:var(--muted);cursor:pointer;
+  font-size:1rem;line-height:1;padding:0 2px;
+}
+.note .del:hover{color:var(--danger)}
+.note.rd{border-left:3px solid var(--primary);background:#0f1723}
+.note.rd .txt{font-family:var(--mono);font-size:.78rem}
+textarea{min-height:86px;resize:vertical;font-size:.9rem}
+
+/* ============================================================
+   Bottom navigation
+   ============================================================ */
+.navbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:70;
+  background:rgba(13,18,27,.92);
+  backdrop-filter:saturate(160%) blur(14px);
+  border-top:1px solid var(--outline-var);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.navbar-in{max-width:880px;margin:0 auto;display:grid;grid-template-columns:repeat(7,1fr)}
+.nav-item{
+  background:none;border:none;cursor:pointer;font-family:inherit;
+  padding:9px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;
+  color:var(--muted);transition:color .15s;
+}
+.nav-item svg{width:21px;height:21px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.nav-item span{font-size:.62rem;font-weight:600;letter-spacing:.01em}
+.nav-item:hover{color:var(--on-surface-var)}
+.nav-item.on{color:var(--primary)}
+.nav-item.on svg{filter:drop-shadow(0 0 8px rgba(79,140,255,.55))}
+
+/* Toast */
+#toast{
+  position:fixed;left:50%;transform:translateX(-50%) translateY(20px);
+  bottom:calc(80px + env(safe-area-inset-bottom));z-index:200;
+  background:var(--surface-3);border:1px solid var(--outline);color:var(--on-surface);
+  padding:11px 18px;border-radius:var(--r-pill);font-size:.84rem;font-weight:600;
+  box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+  max-width:calc(100% - 32px);text-align:center;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:var(--success-dim);color:#a9f0c9}
+#toast.err{border-color:#7f2222;color:#ffc9c9}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media(max-width:560px){
+  body{font-size:14.5px}
+  .frow3{grid-template-columns:1fr 1fr}
+  .prow{grid-template-columns:1fr 1fr auto;grid-template-areas:"id id x" "depth colour colour";
+        padding-bottom:10px;border-bottom:1px dashed var(--outline-var)}
+  .prow:last-child{border-bottom:none;padding-bottom:0}
+  .prow>*:nth-child(1){grid-area:id}
+  .prow>*:nth-child(2){grid-area:depth}
+  .prow>*:nth-child(3){grid-area:colour}
+  .prow>*:nth-child(4){grid-area:x;align-self:end}
+  .arow{grid-template-columns:1fr 1fr;grid-template-areas:"lab lab" "od toe" "col col";
+        padding-bottom:10px;border-bottom:1px dashed var(--outline-var)}
+  .arow:last-child{border-bottom:none;padding-bottom:0}
+  .arow>*:nth-child(1){grid-area:lab}
+  .arow>*:nth-child(2){grid-area:od}
+  .arow>*:nth-child(3){grid-area:toe}
+  .arow>*:nth-child(4){grid-area:col}
+  .alab{padding-bottom:0}
+}
+@media(max-width:400px){
+  .frow,.frow3{grid-template-columns:1fr}
+  .tiles{grid-template-columns:1fr}
+}
+@media print{
+  .appbar,.navbar,.btn,.btn-row{display:none !important}
+  body{background:#fff;color:#000;padding:0}
+  .card{border-color:#ccc;box-shadow:none}
+}
+</style>
 </head>
-<body style="background:#0b0f16;color:#e6edf3;font:16px system-ui,sans-serif;margin:0;display:grid;place-items:center;min-height:100vh">
-<p>Opening the <a href="./pore_pressure_calculator_v11.html" style="color:#6cb6ff">Pore Pressure Calculator</a>&hellip;</p>
-<script>location.replace('./pore_pressure_calculator_v11.html' + location.hash);</script>
+<body>
+
+<header class="appbar">
+  <div class="appbar-in">
+    <div class="brand">
+      <div class="brand-mark">VW</div>
+      <div class="brand-txt">
+        <h1>Pore Pressure Calculator</h1>
+        <span>Vibrating wire piezometers</span>
+      </div>
+    </div>
+    <div class="chips" id="sb">
+      <span class="chip">Logger <b id="sb-logger">&mdash;</b></span>
+      <span class="chip">Sensors <b id="sb-n">0</b></span>
+      <span class="chip">Active <b id="sb-act">&mdash;</b></span>
+      <span class="chip">Units <b id="sb-units">Hz / &deg;C</b></span>
+    </div>
+    <button class="btn btn-tonal btn-sm" id="install-btn" style="display:none;margin-left:auto" onclick="installApp()">Install app</button>
+  </div>
+</header>
+
+<div class="unitbar">
+  <div class="unitbar-in">
+    <div class="seg">
+      <button id="t-hz" class="on" onclick="setFreqType('hz')">Hz</button>
+      <button id="t-dig" onclick="setFreqType('dig')">Digits</button>
+    </div>
+    <div class="seg">
+      <button id="t-c" class="on" onclick="setTempType('c')">&deg;C</button>
+      <button id="t-ohm" onclick="setTempType('ohm')">Ohms</button>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+
+<!-- ===================== HOME / OVERVIEW ===================== -->
+<div id="v-home" class="view active">
+  <div id="home-empty">
+    <div class="card">
+      <div class="card-title">No installation open</div>
+      <p class="hint" style="margin-top:0">Open an existing installation or start a new one from Setup.
+        Everything is stored locally in this browser.</p>
+      <button class="btn btn-primary" style="margin-top:12px" onclick="navGo('setup')">Go to setup</button>
+    </div>
+    <div id="home-recent" class="card" style="display:none">
+      <div class="card-title">Recent installations</div>
+      <div id="recent-list" class="btn-row"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tools &mdash; no installation needed</div>
+      <div class="tiles">
+        <button class="tile" onclick="showView('v-install')">
+          <span class="ico">I</span>
+          <span><span class="tt">Installation planner</span><span class="ts">Galv trimmy, piezo depths, drawing</span></span>
+        </button>
+        <button class="tile accent" onclick="showView('v-grout')">
+          <span class="ico">G</span>
+          <span><span class="tt">Grouting</span><span class="ts">Volumes and mix design</span></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="home-main" style="display:none">
+    <div class="page-head">
+      <h2><span id="home-title">Installation</span><span class="sub" id="home-sub"></span></h2>
+      <button class="btn btn-ghost btn-sm" onclick="navGo('setup')">Setup</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Overview</div>
+      <div id="home-stats" class="kv"></div>
+      <div id="home-alert"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Quick actions</div>
+      <div class="tiles">
+        <button class="tile accent" onclick="showMultiReading()">
+          <span class="ico">R</span>
+          <span><span class="tt">Reading sheet</span><span class="ts">All piezos at once</span></span>
+        </button>
+        <button class="tile" onclick="showSingleReading()">
+          <span class="ico">1</span>
+          <span><span class="tt">Take reading</span><span class="ts">Active sensor only</span></span>
+        </button>
+        <button class="tile" onclick="showView('v-log')">
+          <span class="ico">L</span>
+          <span><span class="tt">Readings log</span><span class="ts">View and export CSV</span></span>
+        </button>
+        <button class="tile warnish" onclick="showFieldZero()">
+          <span class="ico">Z</span>
+          <span><span class="tt">Field zero</span><span class="ts">Update R0 / T0</span></span>
+        </button>
+        <button class="tile" onclick="navGo('notes')">
+          <span class="ico">N</span>
+          <span><span class="tt">Site notes</span><span class="ts">Timestamped log</span></span>
+        </button>
+        <button class="tile" onclick="showOverpressure()">
+          <span class="ico">P</span>
+          <span><span class="tt">Overpressure</span><span class="ts">Reading limits</span></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="card" id="home-latest-wrap" style="display:none">
+      <div class="card-title">Latest reading per piezo</div>
+      <div class="twrap">
+        <table class="tbl">
+          <thead><tr><th>Piezo</th><th>When</th><th>P (kPa)</th><th>Of rated</th><th>Temp &deg;C</th><th>Comment</th></tr></thead>
+          <tbody id="home-latest"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" id="home-chart-wrap" style="display:none">
+      <div class="card-title">Pore pressure vs time</div>
+      <div class="svgwrap" id="home-chart"></div>
+    </div>
+
+    <div class="card" id="home-plan-wrap" style="display:none">
+      <div class="card-title">Planned installation</div>
+      <div id="home-plan" class="kv"></div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn btn-ghost btn-sm" onclick="showView('v-install')">Open planner</button>
+        <button class="btn btn-ghost btn-sm" onclick="showView('v-grout')">Open grouting</button>
+      </div>
+    </div>
+
+    <div class="card" id="home-notes-wrap" style="display:none">
+      <div class="card-title">Recent notes</div>
+      <div id="home-notes"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SETUP ===================== -->
+<div id="v-setup" class="view">
+  <div class="page-head">
+    <h2>Setup<span class="sub">Start a new installation or import an existing one</span></h2>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Installation</div>
+    <div class="fg">
+      <label for="inp-logger">Installation / logger ID</label>
+      <input type="text" id="inp-logger" placeholder="e.g. BH39 or Logger_7" autocomplete="off"
+             onkeydown="if(event.key==='Enter')startSession()">
+    </div>
+    <button class="btn btn-primary" onclick="startSession()">Open or start installation</button>
+    <button class="btn btn-ghost" id="setup-close" style="display:none" onclick="endSession()">Close installation</button>
+    <div id="setup-recent" style="display:none;margin-top:12px">
+      <label style="display:block;font-size:.75rem;font-weight:600;color:var(--on-surface-var);margin-bottom:6px">Recent</label>
+      <div id="setup-recent-list" class="btn-row"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Import &amp; backup</div>
+    <div class="btn-row">
+      <button class="btn btn-tonal btn-sm" onclick="pickCalFile()">Import calibrations (JSON)</button>
+      <button class="btn btn-tonal btn-sm" onclick="pickReadingsFile()">Import readings (CSV)</button>
+      <button class="btn btn-neutral btn-sm" onclick="exportCals()">Export calibrations (JSON)</button>
+    </div>
+    <p class="hint">A calibration JSON can be imported without opening an installation first &mdash; the
+      logger name is taken from the file. Export keeps a copy in case the browser storage is cleared.</p>
+  </div>
+
+  <div class="card" id="setup-sensors-card">
+    <div class="card-title">Calibrations</div>
+    <div id="setup-sensor-list"></div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-primary btn-sm" onclick="showAddSensor()">Add sensor</button>
+      <button class="btn btn-ghost btn-sm" onclick="showEditSensor()">Edit sensor</button>
+      <button class="btn btn-ghost btn-sm" onclick="showCalView('all')">View all calibrations</button>
+      <button class="btn btn-ghost btn-sm" onclick="showSensorSelect()">Set active sensor</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Installation details</div>
+    <div class="tiles">
+      <button class="tile" onclick="showView('v-install')">
+        <span class="ico">I</span>
+        <span><span class="tt">Installation planner</span><span class="ts">Depths, trimmy, drawing</span></span>
+      </button>
+      <button class="tile accent" onclick="showView('v-grout')">
+        <span class="ico">G</span>
+        <span><span class="tt">Grouting</span><span class="ts">Volumes and mix design</span></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SINGLE READING ===================== -->
+<div id="v-reading" class="view">
+  <div class="page-head">
+    <h2 id="reading-title">Reading</h2>
+    <button class="btn btn-ghost btn-sm" onclick="goBack()">Back</button>
+  </div>
+  <div class="card">
+    <div id="reading-sinfo" class="al al-info"></div>
+    <div class="frow">
+      <div class="fg">
+        <label id="r-freq-lbl">Frequency (Hz)</label>
+        <input type="number" id="r-freq" step="any" inputmode="decimal" placeholder="e.g. 1234.5" autocomplete="off"
+               oninput="liveReading()"
+               onkeydown="if(event.key==='Enter')document.getElementById('r-temp').focus()">
+      </div>
+      <div class="fg">
+        <label id="r-temp-lbl">Temperature (&deg;C)</label>
+        <input type="number" id="r-temp" step="any" inputmode="decimal" placeholder="e.g. 18.5" autocomplete="off"
+               oninput="liveReading()"
+               onkeydown="if(event.key==='Enter')submitReading()">
+      </div>
+    </div>
+    <div id="r-live" class="kv" style="display:none;margin-bottom:12px"></div>
+    <div class="fg">
+      <label>Comment <span class="opt">optional, saved with the reading</span></label>
+      <input type="text" id="r-comment" placeholder="e.g. Reading taken immediately after grouting started" autocomplete="off"
+             onkeydown="if(event.key==='Enter')submitReading()">
+    </div>
+    <button class="btn btn-success" onclick="submitReading()">Calculate &amp; log reading</button>
+    <div id="r-err" class="al al-err" style="display:none;margin-top:10px"></div>
+  </div>
+  <div id="r-result-wrap" class="card" style="display:none">
+    <div class="card-title">Latest result</div>
+    <div id="r-result-box" class="kv"></div>
+  </div>
+  <div id="r-hist-wrap" class="card" style="display:none">
+    <div class="card-title">Session history</div>
+    <div class="twrap">
+      <table class="tbl">
+        <thead><tr><th>Time</th><th>Freq (dig)</th><th>Temp (&deg;C)</th><th>P (kPa)</th><th>Comment</th></tr></thead>
+        <tbody id="r-hist-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== READING SHEET (ALL PIEZOS) ===================== -->
+<div id="v-multi" class="view">
+  <div class="page-head">
+    <h2>Reading sheet<span class="sub">All piezos &mdash; tab across to fill in</span></h2>
+    <button class="btn btn-ghost btn-sm" onclick="goBack()">Back</button>
+  </div>
+  <div class="card">
+    <div class="roundbar">
+      <span class="l" id="ms-round">Round 1</span>
+      <span class="r" id="ms-count">0 of 0 filled</span>
+    </div>
+    <div class="mainfield">
+      <label for="ms-comment">Comment for this round</label>
+      <input type="text" id="ms-comment" placeholder="e.g. First reading after lowering piezos" autocomplete="off">
+      <div class="sub">Saved against every piezo logged in this round.</div>
+    </div>
+    <div class="twrap">
+      <table class="tbl no-rc" id="ms-table">
+        <thead><tr>
+          <th>#</th><th>Piezo</th>
+          <th id="ms-fh">Frequency (Hz)</th>
+          <th id="ms-th">Temperature (&deg;C)</th>
+          <th>Digits</th><th>Temp &deg;C</th><th>P (kPa)</th><th>Comment</th>
+        </tr></thead>
+        <tbody id="ms-body"></tbody>
+      </table>
+    </div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-success btn-sm" onclick="logSheet()">Log all readings</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearSheet()">Clear sheet</button>
+      <button class="btn btn-ghost btn-sm" id="ms-rc-btn" onclick="toggleRowComments()">Per-piezo comments</button>
+    </div>
+    <div id="ms-err" class="al al-err" style="display:none;margin-top:10px"></div>
+    <p class="hint">Tab moves across a row and on to the next piezo. Rows left blank are skipped when logging.
+      A per-piezo comment, if used, replaces the round comment for that row.</p>
+    <div class="keyrow">
+      <span class="p-ok"><i></i>under 80% of rated</span>
+      <span class="p-near"><i></i>80 to 100%</span>
+      <span class="p-warn"><i></i>over rated</span>
+      <span class="p-over"><i></i>over 1.25x</span>
+      <span class="p-crit"><i></i>over 1.5x</span>
+    </div>
+  </div>
+  <div id="ms-last-wrap" class="card" style="display:none">
+    <div class="card-title" id="ms-last-title">Last logged round</div>
+    <div class="twrap">
+      <table class="tbl">
+        <thead><tr><th>Piezo</th><th>Digits</th><th>Temp &deg;C</th><th>P (kPa)</th><th>Comment</th></tr></thead>
+        <tbody id="ms-last-body"></tbody>
+      </table>
+    </div>
+  </div>
+  <div id="ms-chart-wrap" class="card" style="display:none">
+    <div class="card-title">Pore pressure vs time</div>
+    <div class="svgwrap" id="ms-chart"></div>
+  </div>
+</div>
+
+<!-- ===================== UNIT CONVERTER ===================== -->
+<div id="v-conv" class="view">
+  <div class="page-head">
+    <h2>Unit converter<span class="sub">Pressure, gauge factors, VW frequency and thermistor</span></h2>
+    <button class="btn btn-ghost btn-sm" onclick="goBack()">Back</button>
+  </div>
+  <div class="card">
+    <div class="convgrid">
+      <div>
+        <div class="fg">
+          <label>From value</label>
+          <input type="number" id="cv-from" step="any" inputmode="decimal" value="1" oninput="convert()" autocomplete="off">
+        </div>
+        <div class="fg">
+          <label>From unit</label>
+          <select id="cv-fromu" onchange="convert(true)"></select>
+        </div>
+      </div>
+      <button class="swapbtn" onclick="swapUnits()" title="Swap">&#8646;</button>
+      <div>
+        <div class="fg">
+          <label>To value</label>
+          <input type="text" id="cv-to" class="readonly" readonly>
+        </div>
+        <div class="fg">
+          <label>To unit</label>
+          <select id="cv-tou" onchange="convert()"></select>
+        </div>
+      </div>
+    </div>
+    <div class="fg" style="margin-top:12px;max-width:180px">
+      <label>Decimal places</label>
+      <input type="number" id="cv-dp" min="0" max="8" step="1" value="3" oninput="convert()">
+    </div>
+    <div id="cv-result" class="al al-info" style="margin-top:12px"></div>
+    <div id="cv-err" class="al al-err" style="display:none"></div>
+    <p class="hint">Units are grouped, and the target switches automatically if you pick a unit from a
+      different group. VW digits use digits = Hz&sup2; / 1000. The thermistor pair uses the 5k
+      Steinhart-Hart model (A 1.4051e-3, B 2.369e-4, C 1.019e-7).</p>
+  </div>
+</div>
+<div id="v-sel" class="view">
+  <div class="page-head">
+    <h2>Select active sensor</h2>
+    <button class="btn btn-ghost btn-sm" onclick="showView('v-setup')">Back</button>
+  </div>
+  <div class="card"><div id="sel-list"></div></div>
+</div>
+
+<!-- ===================== OVERPRESSURE ===================== -->
+<div id="v-op" class="view">
+  <div class="page-head">
+    <h2>Overpressure check<span class="sub">Back-solves the reading at a multiple of the rated pressure</span></h2>
+    <button class="btn btn-ghost btn-sm" onclick="goBack()">Back</button>
+  </div>
+  <div class="card">
+    <div class="fg">
+      <label>Sensor</label>
+      <select id="op-sensor" onchange="opSensorChanged()"></select>
+    </div>
+    <div class="frow3">
+      <div class="fg">
+        <label>Rated pressure (kPa)</label>
+        <input type="number" id="op-rated" step="any" inputmode="decimal" oninput="calcOverpressure()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Temperature (&deg;C)</label>
+        <input type="number" id="op-temp" step="any" inputmode="decimal" oninput="calcOverpressure()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Extra factor</label>
+        <input type="number" id="op-extra" step="any" inputmode="decimal" placeholder="e.g. 2" oninput="calcOverpressure()" autocomplete="off">
+      </div>
+    </div>
+    <p class="hint">The solver works backwards through the sensor's own calibration equation, so it
+      handles linear and polynomial sheets alike. Results are given in both digits and Hz.</p>
+    <div id="op-err" class="al al-warn" style="display:none;margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Reading limits</div>
+    <div class="twrap">
+      <table class="tbl">
+        <thead><tr><th>Case</th><th>Target (kPa)</th><th>Digits</th><th>Hz</th><th>Head (m)</th></tr></thead>
+        <tbody id="op-tbody"></tbody>
+      </table>
+    </div>
+    <div id="op-info" class="kv" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- ===================== NOTES ===================== -->
+<div id="v-notes" class="view">
+  <div class="page-head">
+    <h2>Site notes<span class="sub">Timestamped log across the whole installation</span></h2>
+    <button class="btn btn-ghost btn-sm" onclick="goBack()">Back</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Add a note</div>
+    <div class="frow">
+      <div class="fg">
+        <label>Date &amp; time</label>
+        <input type="datetime-local" id="nt-when">
+      </div>
+      <div class="fg">
+        <label>Quick set</label>
+        <button class="btn btn-neutral" onclick="noteNow()">Set to now</button>
+      </div>
+    </div>
+    <div class="fg">
+      <label>Note</label>
+      <textarea id="nt-text" placeholder="e.g. Piezos lowered to design depth, first reading taken before grouting"></textarea>
+    </div>
+    <button class="btn btn-success" onclick="addNote()">Add note</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Log</div>
+    <div id="nt-list"></div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-success btn-sm" onclick="downloadNotes()">Notes CSV</button>
+      <button class="btn btn-neutral btn-sm" onclick="pickReadingsFile()">Import readings CSV</button>
+      <button class="btn btn-ghost btn-sm" id="nt-rd-btn" onclick="toggleReadingsInNotes()">Show readings in timeline</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearNotes()">Clear notes</button>
+    </div>
+    <p class="hint">Importing a readings CSV restores logged readings for this logger, for example after the
+      browser storage has been cleared. Duplicates are skipped.</p>
+  </div>
+</div>
+
+<!-- ===================== VIEW CALIBRATION ===================== -->
+<div id="v-cal" class="view">
+  <div class="page-head">
+    <h2>Calibration</h2>
+    <button class="btn btn-ghost btn-sm" onclick="showView('v-setup')">Back</button>
+  </div>
+  <div class="card"><div id="cal-content"></div></div>
+</div>
+
+<!-- ===================== FIELD ZERO ===================== -->
+<div id="v-fz" class="view">
+  <div class="page-head">
+    <h2>Field zero</h2>
+    <button class="btn btn-ghost btn-sm" onclick="goBack()">Back</button>
+  </div>
+  <div class="card">
+    <div id="fz-sinfo" class="al al-info"></div>
+    <div id="fz-current" style="margin-bottom:14px"></div>
+    <div class="frow">
+      <div class="fg">
+        <label id="fz-freq-lbl">Frequency (Hz)</label>
+        <input type="number" id="fz-freq" step="any" inputmode="decimal" autocomplete="off"
+               onkeydown="if(event.key==='Enter')document.getElementById('fz-temp').focus()">
+      </div>
+      <div class="fg">
+        <label id="fz-temp-lbl">Temperature (&deg;C)</label>
+        <input type="number" id="fz-temp" step="any" inputmode="decimal" autocomplete="off"
+               onkeydown="if(event.key==='Enter')submitFieldZero()">
+      </div>
+    </div>
+    <button class="btn btn-warn" onclick="submitFieldZero()">Calculate new zero</button>
+    <div id="fz-err" class="al al-err" style="display:none;margin-top:10px"></div>
+    <div id="fz-preview" style="display:none;margin-top:12px">
+      <div id="fz-preview-box" class="kv" style="margin-bottom:10px"></div>
+      <button class="btn btn-success" onclick="confirmFieldZero()">Confirm new zero</button>
+      <button class="btn btn-ghost" onclick="cancelFieldZero()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CAL FORM ===================== -->
+<div id="v-calform" class="view">
+  <div class="page-head">
+    <h2 id="calform-title">Add new sensor</h2>
+    <button class="btn btn-ghost btn-sm" onclick="showView('v-setup')">Back</button>
+  </div>
+  <div class="card"><div id="calform-content"></div></div>
+</div>
+
+<!-- ===================== READINGS LOG ===================== -->
+<div id="v-log" class="view">
+  <div class="page-head">
+    <h2>Readings log</h2>
+    <button class="btn btn-ghost btn-sm" onclick="goBack()">Back</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Sensor</div>
+    <div id="log-sensor-btns"></div>
+    <div id="log-table-wrap" style="display:none;margin-top:14px">
+      <div class="btn-row" style="margin-bottom:10px">
+        <button class="btn btn-success btn-sm" onclick="downloadCSV()">Download CSV</button>
+        <button class="btn btn-danger btn-sm" onclick="clearReadings()">Clear readings</button>
+      </div>
+      <div class="twrap" style="max-height:380px;overflow-y:auto">
+        <table class="tbl">
+          <thead><tr id="log-thead"></tr></thead>
+          <tbody id="log-tbody"></tbody>
+        </table>
+      </div>
+      <p class="hint" id="log-count"></p>
+    </div>
+    <div id="log-empty" class="al al-info" style="display:none;margin-top:14px">No readings found for this sensor.</div>
+  </div>
+</div>
+
+<!-- ===================== INSTALLATION PLANNER ===================== -->
+<div id="v-install" class="view">
+  <div class="page-head">
+    <h2>Installation planner<span class="sub">Galv trimmy, alcathene lines and piezo depths</span></h2>
+    <button class="btn btn-ghost btn-sm" onclick="goBack()">Back</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="n">1</span>Borehole &amp; string</div>
+    <div class="frow3">
+      <div class="fg">
+        <label>Borehole depth (mbgl)</label>
+        <input type="number" id="gi-bh" step="any" inputmode="decimal" value="20" oninput="calcInstall()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Trimmy piece length (m)</label>
+        <input type="number" id="gi-len" step="any" inputmode="decimal" value="6" oninput="calcInstall()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Stickup above GL (m)</label>
+        <input type="number" id="gi-stick" step="any" inputmode="decimal" value="0.5" oninput="calcInstall()" autocomplete="off">
+      </div>
+    </div>
+    <div class="frow3">
+      <div class="fg">
+        <label>String toe depth (mbgl)</label>
+        <input type="number" id="gi-toe" step="any" inputmode="decimal" placeholder="blank = BH depth" oninput="calcInstall()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Joint clearance warning (m)</label>
+        <input type="number" id="gi-clear" step="any" inputmode="decimal" value="0.3" oninput="calcInstall()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Piece numbering</label>
+        <select id="gi-order" onchange="calcInstall()">
+          <option value="bottom">1 = bottom (first down hole)</option>
+          <option value="top">1 = top (at surface)</option>
+        </select>
+      </div>
+    </div>
+    <p class="hint">Pieces are counted along the string from the toe. Total string length = toe depth + stickup.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="n">2</span>Diameters &amp; alcathene</div>
+    <div class="frow3">
+      <div class="fg">
+        <label>Borehole diameter (mm)</label>
+        <input type="number" id="gi-dia" step="any" inputmode="decimal" value="100" oninput="calcInstall()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Galv trimmy OD (mm)</label>
+        <input type="number" id="gi-galvod" step="any" inputmode="decimal" value="25" oninput="calcInstall()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>No. of alcathene trimmies</label>
+        <input type="number" id="gi-nalc" step="1" min="0" max="12" value="0" oninput="renderAlcRows()" autocomplete="off">
+      </div>
+    </div>
+    <div id="gi-alc-rows" style="margin-top:4px"></div>
+    <p class="hint" id="gi-fit"></p>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="n">3</span>Piezometer target depths</div>
+    <div id="gi-rows"></div>
+    <div class="btn-row" style="margin-top:10px">
+      <button class="btn btn-primary btn-sm" onclick="addPiezoRow()">Add piezo</button>
+      <button class="btn btn-neutral btn-sm" onclick="spaceEvenly()">Space evenly</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearPiezoRows()">Clear all</button>
+    </div>
+  </div>
+
+  <div id="gi-err" class="al al-err" style="display:none"></div>
+
+  <div class="card">
+    <div class="card-title">Summary</div>
+    <div id="gi-summary" class="kv"></div>
+    <div id="gi-warn"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Installation schedule</div>
+    <div class="twrap">
+      <table class="tbl">
+        <thead><tr>
+          <th>#</th><th>Piezo</th><th>Colour</th><th>Depth (mbgl)</th><th>Above toe (m)</th>
+          <th>Piece</th><th>From piece toe (m)</th><th>From piece top (m)</th><th>Nearest joint (m)</th>
+        </tr></thead>
+        <tbody id="gi-tbody"></tbody>
+      </table>
+    </div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-success btn-sm" onclick="downloadInstallCSV()">Schedule CSV</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Installation drawing</div>
+    <div class="svgwrap" id="gi-svg"></div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-success btn-sm" onclick="downloadInstallSVG()">Download SVG</button>
+      <button class="btn btn-neutral btn-sm" onclick="printInstallSVG()">Print / PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== GROUTING ===================== -->
+<div id="v-grout" class="view">
+  <div class="page-head">
+    <h2>Grouting<span class="sub">Hole volumes and bentonite-cement mix design</span></h2>
+    <button class="btn btn-ghost btn-sm" onclick="goBack()">Back</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="n">1</span>Borehole volume</div>
+    <div class="frow3">
+      <div class="fg">
+        <label>Hole diameter (mm)</label>
+        <input type="number" id="gg-dia" step="any" inputmode="decimal" value="100" oninput="calcGroutVol()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Grout base depth (mbgl)</label>
+        <input type="number" id="gg-base" step="any" inputmode="decimal" value="20" oninput="calcGroutVol()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Grout top depth (mbgl)</label>
+        <input type="number" id="gg-top" step="any" inputmode="decimal" value="0" oninput="calcGroutVol()" autocomplete="off">
+      </div>
+    </div>
+    <div class="frow3">
+      <div class="fg">
+        <label>Galv trimmy OD (mm)</label>
+        <input type="number" id="gg-galv" step="any" inputmode="decimal" value="25" oninput="calcGroutVol()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Alcathene displacement (L)</label>
+        <input type="number" id="gg-alc" step="any" inputmode="decimal" value="0" oninput="calcGroutVol()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Other displacement (L/m)</label>
+        <input type="number" id="gg-other" step="any" inputmode="decimal" value="0" oninput="calcGroutVol()" autocomplete="off">
+      </div>
+    </div>
+    <div class="fg">
+      <label>Wastage / overbreak (%)</label>
+      <input type="number" id="gg-waste" step="any" inputmode="decimal" value="20" oninput="calcGroutVol()" autocomplete="off">
+    </div>
+    <div class="btn-row" style="margin:12px 0 4px">
+      <button class="btn btn-neutral btn-sm" onclick="importFromPlanner(true)">Import from planner</button>
+    </div>
+    <p class="hint">Displacement covers the galv trimmy, alcathene lines and any cables left in the hole.
+      The alcathene figure is a total volume because each line can stop at a different depth.</p>
+    <div id="gg-vol" class="kv" style="margin-top:12px"></div>
+    <button class="btn btn-tonal" style="margin-top:10px" onclick="useVolInMix()">Use design volume in mix calculator</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="n">2</span>Bentonite-cement grout mix</div>
+    <div class="fg">
+      <label>Mix design</label>
+      <select id="gm-preset" onchange="applyMixPreset()">
+        <option value="A">Mikkelsen &amp; Green &ndash; Mix A (medium / hard soil)</option>
+        <option value="B">Mikkelsen &amp; Green &ndash; Mix B (soft soil)</option>
+        <option value="C">Cement-bentonite (stiff, W/C 1.5)</option>
+        <option value="D">Bentonite slurry only (6% by mass)</option>
+        <option value="X">Custom batch</option>
+      </select>
+    </div>
+    <div class="frow3">
+      <div class="fg">
+        <label>Water per batch (L)</label>
+        <input type="number" id="gm-water" step="any" inputmode="decimal" value="113.6" oninput="markCustom();calcMix()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Cement per batch (kg)</label>
+        <input type="number" id="gm-cem" step="any" inputmode="decimal" value="42.6" oninput="markCustom();calcMix()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Bentonite per batch (kg)</label>
+        <input type="number" id="gm-ben" step="any" inputmode="decimal" value="11.3" oninput="markCustom();calcMix()" autocomplete="off">
+      </div>
+    </div>
+    <div class="fg">
+      <label>Target grout volume (L)</label>
+      <input type="number" id="gm-target" step="any" inputmode="decimal" value="200" oninput="calcMix()" autocomplete="off">
+    </div>
+    <div class="frow3">
+      <div class="fg">
+        <label>Cement bag (kg)</label>
+        <input type="number" id="gm-cembag" step="any" inputmode="decimal" value="20" oninput="calcMix()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Bentonite bag (kg)</label>
+        <input type="number" id="gm-benbag" step="any" inputmode="decimal" value="25" oninput="calcMix()" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Batching</label>
+        <select id="gm-round" onchange="calcMix()">
+          <option value="up">Round up to whole batches</option>
+          <option value="exact">Scale exactly to target</option>
+        </select>
+      </div>
+    </div>
+    <div id="gm-out" class="kv" style="margin-top:12px"></div>
+    <div id="gm-note" class="al al-info" style="margin-top:12px"></div>
+    <div class="al al-warn">
+      Mixing order: water first, then cement while mixing, then bentonite slowly last.
+      Mix until lump-free and let it stand about 10 minutes to hydrate before tremie placement
+      from the base of the hole upwards.
+    </div>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<nav class="navbar">
+  <div class="navbar-in">
+    <button class="nav-item" id="nav-home" onclick="navGo('home')">
+      <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="nav-item" id="nav-setup" onclick="navGo('setup')">
+      <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/></svg>
+      <span>Setup</span>
+    </button>
+    <button class="nav-item" id="nav-read" onclick="navGo('read')">
+      <svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 15l4-5 4 4 4-7 4 5"/></svg>
+      <span>Read</span>
+    </button>
+    <button class="nav-item" id="nav-install" onclick="navGo('install')">
+      <svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M7 3h10"/><circle cx="12" cy="9" r="2"/><circle cx="12" cy="16" r="2"/></svg>
+      <span>Install</span>
+    </button>
+    <button class="nav-item" id="nav-grout" onclick="navGo('grout')">
+      <svg viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 10.5A6 6 0 0 1 6 13.5C6 9.5 12 3 12 3z"/></svg>
+      <span>Grout</span>
+    </button>
+    <button class="nav-item" id="nav-notes" onclick="navGo('notes')">
+      <svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+      <span>Notes</span>
+    </button>
+    <button class="nav-item" id="nav-tools" onclick="navGo('tools')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+      <span>Tools</span>
+    </button>
+  </div>
+</nav>
+
+<div id="toast"></div>
+<input type="file" id="cal-file" accept=".json,application/json" style="display:none" onchange="importCalFile(event)">
+<input type="file" id="rd-file" accept=".csv,text/csv" style="display:none" onchange="importReadingsFile(event)">
+
+<script>
+/* ==========================================================================
+   Constants and state
+   ========================================================================== */
+const DA = 1.4051e-3, DB = 2.369e-4, DC = 1.019e-7;
+const DEG = '\u00b0C';
+
+const S = {
+  loggerId: null,
+  sensors: [],
+  active: null,
+  freqIsHz: true,
+  tempIsOhms: false,
+  mRound: 1, mIdx: 0, mResults: [],
+  fzR0: null, fzT0: null,
+  logPiezoId: null,
+  editingPiezoId: null,
+  view: 'v-home'
+};
+
+/* ==========================================================================
+   Storage
+   ========================================================================== */
+const sk = id => `ppc_sensors_${id}`;
+const rk = (lid, pid) => `ppc_readings_${lid}_${pid}`;
+
+function loadSensors(lid) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(sk(lid)) || 'null');
+    const a = (raw && !Array.isArray(raw)) ? (raw[lid] || []) : (raw || []);
+    return a.sort((x,y) => (parseInt(x.channel_number)||0) - (parseInt(y.channel_number)||0));
+  } catch { return []; }
+}
+function saveSensors() { localStorage.setItem(sk(S.loggerId), JSON.stringify({[S.loggerId]: S.sensors})); }
+
+function loadReadings(pid) {
+  try { return JSON.parse(localStorage.getItem(rk(S.loggerId, pid)) || '[]'); }
+  catch { return []; }
+}
+function appendReading(sensor, rec) {
+  const arr = loadReadings(sensor.piezo_id);
+  arr.push(rec);
+  localStorage.setItem(rk(S.loggerId, sensor.piezo_id), JSON.stringify(arr));
+}
+function getRecent() { try { return JSON.parse(localStorage.getItem('ppc_recent')||'[]'); } catch { return []; } }
+function addRecent(id) {
+  let r = getRecent().filter(x => x !== id);
+  r.unshift(id); r = r.slice(0,5);
+  localStorage.setItem('ppc_recent', JSON.stringify(r));
+}
+
+/* ==========================================================================
+   Helpers
+   ========================================================================== */
+const gel  = id => document.getElementById(id);
+const gnum = (id, dflt) => { const v = parseFloat(gel(id).value); return isFinite(v) ? v : dflt; };
+const esc  = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const f2   = n => (Math.round(n*100)/100).toFixed(2);
+const areaLpm = odMm => Math.PI/4 * (odMm/1000)**2 * 1000;
+
+function toast(msg, kind) {
+  const t = gel('toast');
+  t.textContent = msg;
+  t.className = 'show' + (kind ? ' ' + kind : '');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => { t.className = kind ? kind : ''; }, 2600);
+}
+
+function nowTs() {
+  const d = new Date(), p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+/* ==========================================================================
+   Physics
+   ========================================================================== */
+function hz2dig(hz) { return hz*hz/1000; }
+function dig2hz(d)  { return Math.sqrt(d*1000); }
+
+function ohms2c(R, A, B, C) {
+  A = A||DA; B = B||DB; C = C||DC;
+  if (R <= 0) return NaN;
+  const l = Math.log(R);
+  return 1/(A + B*l + C*l*l*l) - 273.15;
+}
+
+const EQS = {
+  linear_a:     {label:'Linear A',     kind:'linear',
+                 formula:'P = G \u00d7 (R0 \u2212 Ri) + K \u00d7 (Ti \u2212 T0) + D',
+                 note:'Standard vibrating wire form. Pressure is referenced to the zero reading R0.'},
+  linear_b:     {label:'Linear B',     kind:'linear',
+                 formula:'P = G \u00d7 (Ri \u2212 R0) + K \u00d7 (Ti \u2212 T0) + D',
+                 note:'As Linear A but with the reading difference reversed (positive gauge factor sheets).'},
+  polynomial_a: {label:'Polynomial A', kind:'poly',
+                 formula:'P = A\u00b7Ri\u00b2 + B\u00b7Ri + C + K \u00d7 (Ti \u2212 T0) + D',
+                 note:'Absolute polynomial. The calibration constant C sets the datum; R0 is not subtracted.'},
+  polynomial_b: {label:'Polynomial B', kind:'poly',
+                 formula:'P = (A\u00b7Ri\u00b2 + B\u00b7Ri + C) \u2212 (A\u00b7R0\u00b2 + B\u00b7R0 + C) + K \u00d7 (Ti \u2212 T0) + D',
+                 note:'Zero-referenced polynomial. The polynomial is also evaluated at R0 and subtracted.'}
+};
+function normEq(v) {
+  const e = (v||'linear_a').toLowerCase();
+  if (e === 'linear') return 'linear_a';
+  if (e === 'polynomial') return 'polynomial_a';
+  return EQS[e] ? e : 'linear_a';
+}
+const eqLabel = v => EQS[normEq(v)].label;
+
+// Where a reading sits against the sensor's rated pressure.
+function ratedInfo(sensor, P) {
+  const rated = parseFloat(sensor && sensor.rated_pressure_kpa);
+  if (!isFinite(rated) || rated <= 0 || !isFinite(P)) return null;
+  const pct = P / rated * 100;
+  let cls = 'p-ok', label = 'under 80% of rated';
+  if (pct >= 150)      { cls = 'p-crit'; label = 'OVER 1.5x rated'; }
+  else if (pct >= 125) { cls = 'p-over'; label = 'over 1.25x rated'; }
+  else if (pct >= 100) { cls = 'p-warn'; label = 'over rated'; }
+  else if (pct >= 80)  { cls = 'p-near'; label = 'approaching rated'; }
+  return {rated, pct, cls, label};
+}
+
+// Pressure from a reading already reduced to digits and degrees C.
+function pFromDigits(sensor, digits, tempC) {
+  const eq = normEq(sensor.equation_type);
+  const eqUnits = (sensor.equation_units||'hertz').toLowerCase();
+  const eqVal = eqUnits === 'hertz' ? dig2hz(digits) : digits;
+  const R0 = sensor.freq_zero_reading, T0 = sensor.temp_zero_reading;
+  const K = sensor.temp_coefficient||0, D = sensor.offset||0;
+  const tc = K*(tempC-T0);
+  const G = sensor.linear_gauge_factor;
+  const Ap = sensor.poly_coefficient_A||0, Bp = sensor.poly_coefficient_B||0, Cp = sensor.poly_coefficient_C||0;
+  const poly = v => Ap*v*v + Bp*v + Cp;
+  if (eq === 'linear_a') return G*(R0-digits) + tc + D;
+  if (eq === 'linear_b') return G*(digits-R0) + tc + D;
+  if (eq === 'polynomial_b') {
+    const z0 = eqUnits === 'hertz' ? dig2hz(R0) : R0;
+    return poly(eqVal) - poly(z0) + tc + D;
+  }
+  return poly(eqVal) + tc + D;
+}
+
+function calcP(sensor, freqRaw, tempRaw) {
+  const Ri = S.freqIsHz ? hz2dig(freqRaw) : freqRaw;
+  const Ti = S.tempIsOhms
+    ? ohms2c(tempRaw, sensor.thermistor_coefficient_A, sensor.thermistor_coefficient_B, sensor.thermistor_coefficient_C)
+    : tempRaw;
+  return {Ri, Ti, P: pFromDigits(sensor, Ri, Ti)};
+}
+
+// Goal seek: the digits reading that produces targetP at tempC.
+function digitsForPressure(sensor, targetP, tempC) {
+  const f = d => pFromDigits(sensor, d, tempC) - targetP;
+  const LO = 1, HI = 40000, STEP = 25;
+  let a = LO, fa = f(a);
+  if (Math.abs(fa) < 1e-9) return a;
+  for (let b = LO + STEP; b <= HI; b += STEP) {
+    const fb = f(b);
+    if (!isFinite(fb)) { a = b; fa = fb; continue; }
+    if (fa === 0) return a;
+    if (fa * fb < 0) {
+      let x0 = a, x1 = b, f0 = fa;
+      for (let i = 0; i < 100; i++) {
+        const m = (x0 + x1) / 2, fm = f(m);
+        if (f0 * fm <= 0) { x1 = m; } else { x0 = m; f0 = fm; }
+      }
+      return (x0 + x1) / 2;
+    }
+    a = b; fa = fb;
+  }
+  return NaN;
+}
+
+/* ==========================================================================
+   Navigation
+   ========================================================================== */
+const NAV_OF = {
+  'v-home':'home', 'v-setup':'setup',
+  'v-reading':'read', 'v-multi':'read', 'v-log':'read', 'v-fz':'read',
+  'v-install':'install', 'v-grout':'grout', 'v-notes':'notes',
+  'v-op':'tools', 'v-conv':'tools',
+  'v-sel':'setup', 'v-cal':'setup', 'v-calform':'setup'
+};
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  gel(id).classList.add('active');
+  S.view = id;
+  window.scrollTo(0,0);
+  const nav = NAV_OF[id] || 'home';
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('on', b.id === 'nav-'+nav));
+  if (id === 'v-log') renderLog();
+  if (id === 'v-install') initInstall();
+  if (id === 'v-grout') { initInstall(); initGrout(); }
+  if (id === 'v-notes') renderNotes();
+  if (id === 'v-home') renderHome();
+  if (id === 'v-setup') renderSetup();
+}
+function goBack() { showView('v-home'); }
+
+function navGo(key) {
+  if (key === 'home')    return showView('v-home');
+  if (key === 'setup')   return showView('v-setup');
+  if (key === 'install') return showView('v-install');
+  if (key === 'grout')   return showView('v-grout');
+  if (key === 'notes')   return showView('v-notes');
+  if (key === 'tools')   return showConverter();
+  if (key === 'read') {
+    if (!S.loggerId) { toast('Open an installation in Setup first', 'err'); return showView('v-setup'); }
+    if (!S.sensors.length) { toast('No calibrations loaded', 'err'); return showView('v-setup'); }
+    return showMultiReading();
+  }
+}
+
+function updateSB() {
+  const sb = gel('sb');
+  if (!S.loggerId) { sb.classList.remove('on'); return; }
+  sb.classList.add('on');
+  gel('sb-logger').textContent = S.loggerId;
+  gel('sb-n').textContent = S.sensors.length;
+  gel('sb-act').textContent = S.active ? S.active.piezo_id : '\u2014';
+  gel('sb-units').textContent = (S.freqIsHz ? 'Hz' : 'Digits') + ' / ' + (S.tempIsOhms ? 'Ohms' : DEG);
+}
+
+/* ==========================================================================
+   Install as an app (PWA)
+   ========================================================================== */
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  gel('install-btn').style.display = 'inline-flex';
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstall = null;
+  gel('install-btn').style.display = 'none';
+  toast('Installed to your home screen', 'ok');
+});
+async function installApp() {
+  if (!deferredInstall) { toast('Use the browser menu, then Install app', 'err'); return; }
+  deferredInstall.prompt();
+  await deferredInstall.userChoice;
+  deferredInstall = null;
+  gel('install-btn').style.display = 'none';
+}
+
+// Service workers need http(s); opening the file directly still works, just without offline caching.
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./ppc-sw.js').catch(() => {}));
+}
+
+/* ==========================================================================
+   Startup / installation session
+   ========================================================================== */
+(function initStartup() {
+  renderRecent();
+  showView('v-home');
+})();
+
+function renderRecent() {
+  const recent = getRecent();
+  const html = recent.map(l =>
+    `<button class="btn btn-ghost btn-sm" onclick="quickStart('${esc(l)}')">${esc(l)}</button>`).join('');
+  gel('home-recent').style.display = recent.length ? 'block' : 'none';
+  gel('recent-list').innerHTML = html;
+  gel('setup-recent').style.display = recent.length ? 'block' : 'none';
+  gel('setup-recent-list').innerHTML = html;
+}
+
+function quickStart(id) { gel('inp-logger').value = id; startSession(); }
+
+function startSession() {
+  const id = gel('inp-logger').value.trim();
+  if (!id) { toast('Enter an installation ID', 'err'); return; }
+  S.loggerId = id;
+  S.sensors = loadSensors(id);
+  S.active = S.sensors[0] || null;
+  addRecent(id);
+  renderRecent();
+  updateSB();
+  renderSetup();
+  showView('v-home');
+  toast(`Installation open: ${id}`, 'ok');
+}
+
+function endSession() {
+  if (!confirm('Close this installation? Nothing is deleted, it stays in this browser.')) return;
+  S.loggerId = null; S.sensors = []; S.active = null;
+  gel('sb').classList.remove('on');
+  gel('inp-logger').value = '';
+  renderSetup();
+  showView('v-home');
+}
+
+/* ==========================================================================
+   Home overview
+   ========================================================================== */
+function renderHome() {
+  const open = !!S.loggerId;
+  gel('home-empty').style.display = open ? 'none' : 'block';
+  gel('home-main').style.display = open ? 'block' : 'none';
+  if (!open) { renderRecent(); return; }
+
+  gel('home-title').textContent = S.loggerId;
+  gel('home-sub').textContent = `${S.sensors.length} piezometer(s) configured`;
+
+  // Latest reading per piezo
+  const latest = S.sensors.map(s => {
+    const rs = loadReadings(s.piezo_id);
+    return {s, r: rs.length ? rs[rs.length-1] : null, n: rs.length};
+  });
+  const total = latest.reduce((a,b) => a + b.n, 0);
+  const withData = latest.filter(x => x.r);
+  const lastTs = withData.length ? withData.map(x => x.r.ts).sort().slice(-1)[0] : null;
+  const notes = loadNotes();
+  const flagged = withData.filter(x => {
+    const ri = ratedInfo(x.s, +x.r.pore_pressure_kPa);
+    return ri && ri.pct >= 80;
+  });
+
+  gel('home-stats').innerHTML = `
+    <div class="row"><span class="k">Installation</span><span class="v">${esc(S.loggerId)}</span></div>
+    <div class="row"><span class="k">Piezometers</span><span class="v">${S.sensors.length}</span></div>
+    <div class="row"><span class="k">Active sensor</span><span class="v">${S.active ? esc(S.active.piezo_id) : '\u2014'}</span></div>
+    <div class="row"><span class="k">Readings logged</span><span class="v">${total}</span></div>
+    <div class="row"><span class="k">Last reading</span><span class="v">${lastTs ? esc(lastTs) : 'none yet'}</span></div>
+    <div class="row"><span class="k">Site notes</span><span class="v">${notes.length}</span></div>`;
+
+  gel('home-alert').innerHTML = !S.sensors.length
+    ? `<div class="al al-warn" style="margin-top:12px;margin-bottom:0">No calibrations loaded. Go to Setup to add or import them.</div>`
+    : (flagged.length
+      ? `<div class="al al-warn" style="margin-top:12px;margin-bottom:0">${flagged.length} piezo(s) at or above 80% of rated pressure: ${flagged.map(x => esc(x.s.piezo_id)).join(', ')}</div>`
+      : '');
+
+  gel('home-latest-wrap').style.display = withData.length ? 'block' : 'none';
+  gel('home-latest').innerHTML = withData.map(({s,r}) => {
+    const ri = ratedInfo(s, +r.pore_pressure_kPa);
+    return `<tr><td class="pz">${esc(s.piezo_id)}</td><td>${esc(String(r.ts).slice(5,16))}</td>
+      <td class="out"><strong class="${ri?ri.cls:''}">${(+r.pore_pressure_kPa).toFixed(2)}</strong></td>
+      <td class="${ri?ri.cls:''}">${ri ? ri.pct.toFixed(0)+'%' : '\u2014'}</td>
+      <td class="out">${isFinite(+r.temp_celsius) ? (+r.temp_celsius).toFixed(2) : '\u2014'}</td>
+      <td>${esc(r.comment||'')}</td></tr>`;
+  }).join('');
+
+  const chartWrap = gel('home-chart-wrap');
+  const series = seriesData();
+  if (series.length) { chartWrap.style.display = 'block'; gel('home-chart').innerHTML = buildSeriesSVG(series); }
+  else chartWrap.style.display = 'none';
+
+  renderHomePlan();
+
+  gel('home-notes-wrap').style.display = notes.length ? 'block' : 'none';
+  gel('home-notes').innerHTML = notes.slice().sort((a,b) => a.ts < b.ts ? 1 : -1).slice(0,4).map(n =>
+    `<div class="note"><span class="time">${esc(n.ts.slice(5,16))}</span><span class="txt">${esc(n.text)}</span></div>`).join('');
+}
+
+function renderHomePlan() {
+  let p = null;
+  try { p = JSON.parse(localStorage.getItem(IK) || 'null'); } catch {}
+  const wrap = gel('home-plan-wrap');
+  if (!p || !p.bh) { wrap.style.display = 'none'; return; }
+  const depths = (p.piezos||[]).filter(x => x.depth !== '' && isFinite(+x.depth));
+  wrap.style.display = 'block';
+  gel('home-plan').innerHTML = `
+    <div class="row"><span class="k">Borehole depth</span><span class="v">${f2(+p.bh)} m</span></div>
+    <div class="row"><span class="k">Hole diameter</span><span class="v">${p.dia ? f2(+p.dia)+' mm' : '\u2014'}</span></div>
+    <div class="row"><span class="k">Piezos planned</span><span class="v">${depths.length}</span></div>
+    <div class="row"><span class="k">Target depths</span><span class="v">${depths.length ? esc(depths.map(x => f2(+x.depth)).join(', ')) + ' m' : '\u2014'}</span></div>
+    <div class="row"><span class="k">Alcathene lines</span><span class="v">${(p.alc||[]).length || 'none'}</span></div>`;
+}
+
+/* ==========================================================================
+   Setup
+   ========================================================================== */
+function renderSetup() {
+  gel('setup-close').style.display = S.loggerId ? 'block' : 'none';
+  if (S.loggerId) gel('inp-logger').value = S.loggerId;
+  const el = gel('setup-sensor-list');
+  if (!S.loggerId) {
+    el.innerHTML = '<p class="hint" style="margin:0">Open or start an installation to manage its calibrations.</p>';
+    return;
+  }
+  el.innerHTML = S.sensors.length
+    ? S.sensors.map((s,i) => sensorItem(s, i, 'setActive')).join('')
+    : '<p class="hint" style="margin:0">No calibrations yet. Add a sensor or import a calibration JSON.</p>';
+}
+
+function sensorItem(s, i, fn) {
+  const isAct = S.active && S.active.piezo_id === s.piezo_id;
+  return `<div class="item ${isAct?'on':''}" onclick="${fn}(${i})">
+    <div class="num">${i+1}</div>
+    <div class="body">
+      <div class="t">${esc(s.piezo_id)} <span class="badge">Ch ${esc(s.channel_number||'?')}</span></div>
+      <div class="m">S/N ${esc(s.piezo_serial||'\u2014')} &middot; ${esc(s.piezo_colour||'\u2014')} &middot; ${EQS[normEq(s.equation_type)].label}${s.rated_pressure_kpa?` &middot; ${f2(s.rated_pressure_kpa)} kPa rated`:''}</div>
+    </div>
+    ${isAct?'<span class="badge ok">Active</span>':''}
+  </div>`;
+}
+function setActive(idx) { S.active = S.sensors[idx]; renderSetup(); updateSB(); }
+
+/* ==========================================================================
+   Sensor select
+   ========================================================================== */
+function showSensorSelect() {
+  gel('sel-list').innerHTML = S.sensors.length
+    ? S.sensors.map((s,i) => sensorItem(s, i, 'pickSensor')).join('')
+    : '<p class="hint" style="margin:0">No sensors yet.</p>';
+  showView('v-sel');
+}
+function pickSensor(idx) {
+  S.active = S.sensors[idx];
+  updateSB(); renderSetup(); showView('v-setup');
+  toast(`Active sensor: ${S.active.piezo_id}`, 'ok');
+}
+
+/* ==========================================================================
+   Input units (top bar)
+   ========================================================================== */
+function setFreqType(t) {
+  S.freqIsHz = t === 'hz';
+  gel('t-hz').classList.toggle('on',  S.freqIsHz);
+  gel('t-dig').classList.toggle('on', !S.freqIsHz);
+  unitsChanged();
+}
+function setTempType(t) {
+  S.tempIsOhms = t === 'ohm';
+  gel('t-c').classList.toggle('on',   !S.tempIsOhms);
+  gel('t-ohm').classList.toggle('on',  S.tempIsOhms);
+  unitsChanged();
+}
+const freqUnitLabel = () => S.freqIsHz ? 'Hz' : 'Digits';
+const tempUnitLabel = () => S.tempIsOhms ? 'Ohms' : DEG;
+
+// Relabel and recompute whatever view is open; stored data stays digits + degrees C.
+function unitsChanged() {
+  updateSB();
+  gel('r-freq-lbl').textContent = `Frequency (${freqUnitLabel()})`;
+  gel('r-temp-lbl').textContent = `Temperature (${tempUnitLabel()})`;
+  gel('fz-freq-lbl').textContent = `Frequency (${freqUnitLabel()})`;
+  gel('fz-temp-lbl').textContent = `Temperature (${tempUnitLabel()})`;
+  gel('ms-fh').textContent = `Frequency (${freqUnitLabel()})`;
+  gel('ms-th').textContent = `Temperature (${tempUnitLabel()})`;
+  if (S.view === 'v-multi') recalcSheet();
+  if (S.view === 'v-log' && S.logPiezoId) showLogSensor(S.logPiezoId);
+}
+
+/* ==========================================================================
+   Single reading
+   ========================================================================== */
+function showSingleReading() {
+  if (!S.active) { toast('No active sensor', 'err'); return; }
+  const s = S.active;
+  gel('reading-title').textContent = `Reading \u2014 ${s.piezo_id}`;
+  gel('reading-sinfo').innerHTML =
+    `<strong>${esc(s.piezo_id)}</strong> <span class="badge">Ch ${esc(s.channel_number||'?')}</span><br>
+     S/N ${esc(s.piezo_serial||'\u2014')} &nbsp;&middot;&nbsp; ${esc(s.piezo_colour||'\u2014')}`;
+  gel('r-freq-lbl').textContent = `Frequency (${freqUnitLabel()})`;
+  gel('r-temp-lbl').textContent = `Temperature (${tempUnitLabel()})`;
+  gel('r-freq').value = '';
+  gel('r-temp').value = '';
+  gel('r-comment').value = '';
+  gel('r-live').style.display = 'none';
+  gel('r-result-wrap').style.display = 'none';
+  gel('r-hist-wrap').style.display = 'none';
+  gel('r-err').style.display = 'none';
+  gel('r-hist-tbody').innerHTML = '';
+  showView('v-reading');
+  setTimeout(() => gel('r-freq').focus(), 80);
+}
+
+// Live preview so the pressure and overpressure status update while typing.
+function liveReading() {
+  const box = gel('r-live');
+  const f = parseFloat(gel('r-freq').value);
+  const t = parseFloat(gel('r-temp').value);
+  if (!S.active || isNaN(f) || isNaN(t)) { box.style.display = 'none'; return; }
+  const {Ri, Ti, P} = calcP(S.active, f, t);
+  const ri = ratedInfo(S.active, P);
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="row"><span class="k">Freq (digits)</span><span class="v">${Ri.toFixed(3)}</span></div>
+    <div class="row"><span class="k">Temp (${DEG})</span><span class="v">${isNaN(Ti)?'NaN':Ti.toFixed(3)}</span></div>
+    ${ri ? `<div class="row"><span class="k">Of rated (${f2(ri.rated)} kPa)</span><span class="v ${ri.cls}">${ri.pct.toFixed(1)}% &nbsp;${ri.label}</span></div>` : ''}
+    <div class="row sep"><span class="k">Pore pressure</span><span class="v big ${ri?ri.cls:''}">${isNaN(P)?'NaN':P.toFixed(3)} kPa</span></div>`;
+}
+
+function submitReading() {
+  const f = parseFloat(gel('r-freq').value);
+  const t = parseFloat(gel('r-temp').value);
+  const err = gel('r-err');
+  err.style.display = 'none';
+  if (isNaN(f) || isNaN(t)) { err.textContent = 'Enter valid numbers for frequency and temperature.'; err.style.display = 'block'; return; }
+  let res;
+  try { res = calcP(S.active, f, t); }
+  catch (e) { err.textContent = 'Calculation error: ' + e.message; err.style.display = 'block'; return; }
+  const {Ri, Ti, P} = res, ts = nowTs();
+  const comment = gel('r-comment').value.trim();
+  if (isNaN(Ti)) { err.textContent = 'Warning: temperature conversion returned NaN \u2014 check the ohms value.'; err.style.display = 'block'; }
+  const fl = freqUnitLabel(), tl = tempUnitLabel();
+  gel('r-result-box').innerHTML = `
+    <div class="row"><span class="k">Timestamp</span><span class="v">${ts}</span></div>
+    <div class="row"><span class="k">Freq input (${fl})</span><span class="v">${f.toFixed(3)}</span></div>
+    <div class="row"><span class="k">Freq (digits)</span><span class="v">${Ri.toFixed(3)}</span></div>
+    <div class="row"><span class="k">Temp input (${tl})</span><span class="v">${t.toFixed(3)}</span></div>
+    <div class="row"><span class="k">Temp (${DEG})</span><span class="v">${isNaN(Ti)?'NaN':Ti.toFixed(3)}</span></div>
+    ${comment ? `<div class="row"><span class="k">Comment</span><span class="v">${esc(comment)}</span></div>` : ''}
+    ${ratedRow(S.active, P)}
+    <div class="row sep"><span class="k">Pore pressure</span><span class="v big ${(ratedInfo(S.active,P)||{}).cls||''}">${P.toFixed(4)} kPa</span></div>`;
+  gel('r-result-wrap').style.display = 'block';
+  appendReading(S.active, {ts, logger_id:S.loggerId, piezo_id:S.active.piezo_id,
+    freq_input:f, freq_input_units:fl, freq_digits:Ri,
+    temp_input:t, temp_input_units:tl, temp_celsius:Ti,
+    pore_pressure_kPa:P, comment});
+  const tb = gel('r-hist-tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${ts.slice(11)}</td><td>${Ri.toFixed(3)}</td><td>${isNaN(Ti)?'\u2014':Ti.toFixed(3)}</td><td><strong>${P.toFixed(4)}</strong></td><td>${esc(comment)}</td>`;
+  tb.insertBefore(tr, tb.firstChild);
+  gel('r-hist-wrap').style.display = 'block';
+  gel('r-freq').value = '';
+  gel('r-temp').value = '';
+  gel('r-live').style.display = 'none';
+  gel('r-freq').focus();
+}
+
+// Shows how hard the sensor is being worked when a rated pressure is on file.
+function ratedRow(sensor, P) {
+  const ri = ratedInfo(sensor, P);
+  if (!ri) return '';
+  return `<div class="row"><span class="k">Of rated (${f2(ri.rated)} kPa)</span>
+    <span class="v ${ri.cls}">${ri.pct.toFixed(1)}% &nbsp;${ri.label}</span></div>`;
+}
+
+/* ==========================================================================
+   Reading sheet - every piezo on one tabbable grid
+   ========================================================================== */
+function showMultiReading() {
+  if (!S.sensors.length) { toast('No sensors configured', 'err'); return; }
+  renderSheet();
+  renderSeries();
+  showView('v-multi');
+  const first = document.querySelector('#ms-body .ms-f');
+  if (first) setTimeout(() => first.focus(), 80);
+}
+
+function renderSheet() {
+  gel('ms-round').textContent = `Round ${S.mRound}`;
+  gel('ms-fh').textContent = `Frequency (${freqUnitLabel()})`;
+  gel('ms-th').textContent = `Temperature (${tempUnitLabel()})`;
+  gel('ms-err').style.display = 'none';
+  const body = gel('ms-body');
+  body.innerHTML = '';
+  S.sensors.forEach((s,i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td class="pz">${esc(s.piezo_id)} <span class="badge">Ch ${esc(s.channel_number||'?')}</span></td>
+      <td><input type="number" step="any" inputmode="decimal" class="ms-f" autocomplete="off"></td>
+      <td><input type="number" step="any" inputmode="decimal" class="ms-t" autocomplete="off"></td>
+      <td class="out ms-dig">&mdash;</td>
+      <td class="out ms-tc">&mdash;</td>
+      <td class="out kpa ms-p">&mdash;</td>
+      <td><input type="text" class="ms-c wide" placeholder="optional" autocomplete="off"></td>`;
+    body.appendChild(tr);
+    tr.querySelector('.ms-f').oninput = recalcSheet;
+    tr.querySelector('.ms-t').oninput = recalcSheet;
+    tr.querySelector('.ms-f').onkeydown = sheetKey;
+    tr.querySelector('.ms-t').onkeydown = sheetKey;
+  });
+  recalcSheet();
+}
+
+// Enter behaves like tab so a gloved hand can run straight down the sheet.
+function sheetKey(e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const fields = [...document.querySelectorAll('#ms-body input')];
+  const i = fields.indexOf(e.target);
+  if (i >= 0 && i + 1 < fields.length) fields[i+1].focus();
+}
+
+function recalcSheet() {
+  let filled = 0;
+  [...gel('ms-body').children].forEach((tr,i) => {
+    const s = S.sensors[i];
+    const f = parseFloat(tr.querySelector('.ms-f').value);
+    const t = parseFloat(tr.querySelector('.ms-t').value);
+    const dig = tr.querySelector('.ms-dig'), tc = tr.querySelector('.ms-tc'), pp = tr.querySelector('.ms-p');
+    if (isNaN(f) && isNaN(t)) { dig.textContent = tc.textContent = pp.textContent = '\u2014'; return; }
+    if (isNaN(f) || isNaN(t)) { dig.textContent = tc.textContent = pp.textContent = '...'; return; }
+    filled++;
+    const {Ri, Ti, P} = calcP(s, f, t);
+    dig.textContent = Ri.toFixed(3);
+    tc.textContent = isNaN(Ti) ? 'NaN' : Ti.toFixed(3);
+    const ri = ratedInfo(s, P);
+    pp.innerHTML = isNaN(P) ? 'NaN'
+      : `<span class="${ri?ri.cls:''}">${P.toFixed(3)}</span>` +
+        (ri ? `<span class="pct">${ri.pct.toFixed(0)}% of ${f2(ri.rated)}</span>` : '');
+    pp.title = ri ? ri.label : '';
+  });
+  gel('ms-count').textContent = `${filled} of ${S.sensors.length} filled`;
+}
+
+function logSheet() {
+  const err = gel('ms-err'); err.style.display = 'none';
+  const roundComment = gel('ms-comment').value.trim();
+  const rows = [...gel('ms-body').children];
+  const done = [];
+  const partial = [];
+  rows.forEach((tr,i) => {
+    const s = S.sensors[i];
+    const f = parseFloat(tr.querySelector('.ms-f').value);
+    const t = parseFloat(tr.querySelector('.ms-t').value);
+    if (isNaN(f) && isNaN(t)) return;
+    if (isNaN(f) || isNaN(t)) { partial.push(s.piezo_id); return; }
+    const comment = tr.querySelector('.ms-c').value.trim() || roundComment;
+    const {Ri, Ti, P} = calcP(s, f, t);
+    const ts = nowTs();
+    appendReading(s, {ts, logger_id:S.loggerId, piezo_id:s.piezo_id, round:S.mRound,
+      freq_input:f, freq_input_units:freqUnitLabel(), freq_digits:Ri,
+      temp_input:t, temp_input_units:tempUnitLabel(), temp_celsius:Ti,
+      pore_pressure_kPa:P, comment});
+    done.push({s, Ri, Ti, P, comment});
+  });
+  if (partial.length) {
+    err.textContent = `Both values are needed for: ${partial.join(', ')}.`;
+    err.style.display = 'block';
+    return;
+  }
+  if (!done.length) { err.textContent = 'Nothing to log yet.'; err.style.display = 'block'; return; }
+
+  gel('ms-last-title').textContent = `Round ${S.mRound} logged`;
+  gel('ms-last-body').innerHTML = done.map(d => {
+    const ri = ratedInfo(d.s, d.P);
+    return `<tr><td class="pz">${esc(d.s.piezo_id)}</td><td>${d.Ri.toFixed(3)}</td>
+     <td>${isNaN(d.Ti)?'NaN':d.Ti.toFixed(3)}</td>
+     <td><strong class="${ri?ri.cls:''}">${d.P.toFixed(3)}</strong>${ri?`<span class="pct">${ri.pct.toFixed(0)}%</span>`:''}</td>
+     <td>${esc(d.comment||'')}</td></tr>`;
+  }).join('');
+  gel('ms-last-wrap').style.display = 'block';
+
+  S.mRound++;
+  gel('ms-comment').value = '';
+  renderSheet();
+  renderSeries();
+  toast(`${done.length} reading(s) logged`, 'ok');
+  const first = document.querySelector('#ms-body .ms-f');
+  if (first) first.focus();
+}
+
+function clearSheet() {
+  document.querySelectorAll('#ms-body input').forEach(i => { i.value = ''; });
+  recalcSheet();
+}
+
+function toggleRowComments() {
+  const on = gel('ms-table').classList.toggle('no-rc');
+  const btn = gel('ms-rc-btn');
+  btn.classList.toggle('btn-tonal', !on);
+  btn.classList.toggle('btn-ghost', on);
+}
+
+/* --- Time series of every piezo ------------------------------------------- */
+const SERIES_COLS = ['#4f8cff','#22c55e','#f5a524','#f26d6d','#a855f7','#22d3ee','#ec4899','#84cc16','#fb923c','#94a3b8'];
+const tsDate = s => new Date(String(s).replace(' ', 'T'));
+
+function seriesData() {
+  return S.sensors.map((s,i) => ({
+    id: s.piezo_id,
+    col: SERIES_COLS[i % SERIES_COLS.length],
+    pts: loadReadings(s.piezo_id)
+      .map(r => ({t: tsDate(r.ts).getTime(), p: +r.pore_pressure_kPa}))
+      .filter(p => isFinite(p.t) && isFinite(p.p))
+      .sort((a,b) => a.t - b.t)
+  })).filter(s => s.pts.length);
+}
+
+function renderSeries() {
+  const wrap = gel('ms-chart-wrap');
+  const series = seriesData();
+  if (!series.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  gel('ms-chart').innerHTML = buildSeriesSVG(series);
+}
+
+function buildSeriesSVG(series) {
+  const W = 700, H = 300, ml = 56, mr = 168, mt = 18, mb = 40;
+  const pw = W - ml - mr, ph = H - mt - mb;
+  const all = series.flatMap(s => s.pts);
+  let t0 = Math.min(...all.map(p => p.t)), t1 = Math.max(...all.map(p => p.t));
+  let p0 = Math.min(...all.map(p => p.p)), p1 = Math.max(...all.map(p => p.p));
+  if (t1 === t0) { t0 -= 60000; t1 += 60000; }
+  const padP = (p1 - p0) || Math.max(1, Math.abs(p1) * 0.1);
+  p0 -= padP * 0.1; p1 += padP * 0.1;
+  const X = t => ml + (t - t0) / (t1 - t0) * pw;
+  const Y = p => mt + ph - (p - p0) / (p1 - p0) * ph;
+
+  const o = [];
+  const P = (...a) => o.push(...a);
+  P(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="Segoe UI,Arial,sans-serif">`);
+  P(`<rect width="${W}" height="${H}" fill="#080b11"/>`);
+
+  // Grid and axes
+  const yStep = niceStep(p1 - p0, 5);
+  for (let v = Math.ceil(p0/yStep)*yStep; v <= p1; v += yStep) {
+    const yy = Y(v);
+    P(`<line x1="${ml}" y1="${yy.toFixed(1)}" x2="${ml+pw}" y2="${yy.toFixed(1)}" stroke="#161f2c"/>`);
+    P(`<text x="${ml-8}" y="${(yy+3).toFixed(1)}" fill="#55637a" font-size="8.5" text-anchor="end">${v.toFixed(yStep<1?2:(yStep<10?1:0))}</text>`);
+  }
+  P(`<line x1="${ml}" y1="${mt}" x2="${ml}" y2="${mt+ph}" stroke="#2b3648"/>`);
+  P(`<line x1="${ml}" y1="${mt+ph}" x2="${ml+pw}" y2="${mt+ph}" stroke="#2b3648"/>`);
+  P(`<text x="14" y="${mt+ph/2}" fill="#7c8ba3" font-size="9" text-anchor="middle" transform="rotate(-90 14 ${mt+ph/2})">Pore pressure (kPa)</text>`);
+
+  const spanDays = (t1 - t0) / 86400000;
+  for (let i = 0; i <= 4; i++) {
+    const t = t0 + (t1 - t0) * i / 4;
+    const d = new Date(t), p2 = n => String(n).padStart(2,'0');
+    const lab = spanDays > 1 ? `${p2(d.getDate())}/${p2(d.getMonth()+1)} ${p2(d.getHours())}:${p2(d.getMinutes())}`
+                             : `${p2(d.getHours())}:${p2(d.getMinutes())}`;
+    P(`<line x1="${X(t).toFixed(1)}" y1="${mt+ph}" x2="${X(t).toFixed(1)}" y2="${mt+ph+4}" stroke="#2b3648"/>`);
+    P(`<text x="${X(t).toFixed(1)}" y="${mt+ph+16}" fill="#55637a" font-size="8" text-anchor="middle">${lab}</text>`);
+  }
+
+  // Series
+  series.forEach(s => {
+    if (s.pts.length > 1) {
+      const dd = s.pts.map((p,i) => `${i?'L':'M'} ${X(p.t).toFixed(1)} ${Y(p.p).toFixed(1)}`).join(' ');
+      P(`<path d="${dd}" fill="none" stroke="${s.col}" stroke-width="1.8" stroke-linejoin="round"/>`);
+    }
+    s.pts.forEach(p => P(`<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.p).toFixed(1)}" r="2.6" fill="${s.col}"/>`));
+  });
+
+  // Legend on the right, latest value per piezo
+  let ly = mt + 6;
+  P(`<text x="${ml+pw+14}" y="${ly}" fill="#8fb8ff" font-size="8.5" font-weight="700" letter-spacing=".6">PIEZOMETERS</text>`);
+  ly += 16;
+  series.forEach(s => {
+    const last = s.pts[s.pts.length-1];
+    const sensor = S.sensors.find(x => x.piezo_id === s.id);
+    const ri = ratedInfo(sensor, last.p);
+    P(`<rect x="${ml+pw+14}" y="${ly-7}" width="10" height="8" rx="2" fill="${s.col}"/>`);
+    P(`<text x="${ml+pw+30}" y="${ly}" fill="#dbe5f2" font-size="9" font-weight="700">${esc(s.id)}</text>`);
+    P(`<text x="${W-12}" y="${ly}" fill="${s.col}" font-size="9" text-anchor="end">${last.p.toFixed(1)} kPa</text>`);
+    ly += 12;
+    P(`<text x="${ml+pw+30}" y="${ly}" fill="#7c8ba3" font-size="7.5">${s.pts.length} reading(s)${ri?` \u00b7 ${ri.pct.toFixed(0)}% of rated`:''}</text>`);
+    ly += 16;
+  });
+  P(`</svg>`);
+  return o.join('');
+}
+
+/* ==========================================================================
+   Unit converter
+   ========================================================================== */
+function ohmsFromC(targetC) {
+  let low = 100, high = 1000000;
+  for (let i = 0; i < 80; i++) {
+    const mid = (low + high) / 2;
+    if (ohms2c(mid) > targetC) low = mid; else high = mid;
+  }
+  return (low + high) / 2;
+}
+
+const PSI = 6894.757293168, MH2O = 9806.65;
+const lin = (label, group, k) => ({label, group, toBase: v => v*k, fromBase: v => v/k});
+const UNITS = {
+  pa:   lin('Pa', 'pressure', 1),
+  hpa:  lin('hPa', 'pressure', 100),
+  kpa:  lin('kPa', 'pressure', 1000),
+  mpa:  lin('MPa', 'pressure', 1e6),
+  bar:  lin('bar', 'pressure', 1e5),
+  mbar: lin('mbar', 'pressure', 100),
+  psi:  lin('psi', 'pressure', PSI),
+  atm:  lin('atm', 'pressure', 101325),
+  mmhg: lin('mmHg', 'pressure', 133.322387415),
+  mh2o: lin('mH2O', 'pressure', MH2O),
+  fth2o:lin('ftH2O', 'pressure', MH2O*0.3048),
+  inh2o:lin('inH2O', 'pressure', MH2O*0.0254),
+
+  psiPerDigit:  lin('psi / digit', 'per_digit', PSI),
+  kpaPerDigit:  lin('kPa / digit', 'per_digit', 1000),
+  hpaPerDigit:  lin('hPa / digit', 'per_digit', 100),
+  barPerDigit:  lin('bar / digit', 'per_digit', 1e5),
+  mh2oPerDigit: lin('mH2O / digit', 'per_digit', MH2O),
+
+  psiPerC:  lin('psi / \u00b0C', 'per_degc', PSI),
+  kpaPerC:  lin('kPa / \u00b0C', 'per_degc', 1000),
+  hpaPerC:  lin('hPa / \u00b0C', 'per_degc', 100),
+  mh2oPerC: lin('mH2O / \u00b0C', 'per_degc', MH2O),
+
+  hz:       {label:'Frequency (Hz)', group:'vw', toBase: v => v, fromBase: v => v},
+  vwDigits: {label:'VW digits (Hz\u00b2/1000)', group:'vw',
+             toBase: v => { if (v < 0) throw new Error('VW digits cannot be negative.'); return dig2hz(v); },
+             fromBase: v => hz2dig(v)},
+  period:   {label:'Period (ms)', group:'vw',
+             toBase: v => { if (!(v > 0)) throw new Error('Period must be greater than zero.'); return 1000/v; },
+             fromBase: v => { if (!(v > 0)) throw new Error('Frequency must be greater than zero.'); return 1000/v; }},
+
+  thermOhm: {label:'Thermistor ohms (5k)', group:'therm',
+             toBase: v => { if (!(v > 0)) throw new Error('Resistance must be greater than zero.'); return ohms2c(v); },
+             fromBase: v => ohmsFromC(v)},
+  thermC:   {label:'Thermistor \u00b0C (5k)', group:'therm', toBase: v => v, fromBase: v => v},
+
+  c:  {label:'\u00b0C', group:'temp', toBase: v => v, fromBase: v => v},
+  f:  {label:'\u00b0F', group:'temp', toBase: v => (v-32)*5/9, fromBase: v => v*9/5+32},
+  k:  {label:'K',  group:'temp', toBase: v => v-273.15, fromBase: v => v+273.15},
+
+  m:  lin('m', 'length', 1),
+  mm: lin('mm', 'length', 0.001),
+  cm: lin('cm', 'length', 0.01),
+  km: lin('km', 'length', 1000),
+  ft: lin('ft', 'length', 0.3048),
+  inch: lin('in', 'length', 0.0254),
+
+  l:   lin('L', 'volume', 1),
+  ml:  lin('mL', 'volume', 0.001),
+  m3:  lin('m\u00b3', 'volume', 1000),
+  galUS: lin('US gallon', 'volume', 3.785411784),
+  galUK: lin('UK gallon', 'volume', 4.54609),
+
+  kg:  lin('kg', 'mass', 1),
+  g:   lin('g', 'mass', 0.001),
+  t:   lin('tonne', 'mass', 1000),
+  lb:  lin('lb', 'mass', 0.45359237)
+};
+
+let convReady = false;
+function showConverter() {
+  if (!convReady) {
+    convReady = true;
+    const opts = Object.entries(UNITS).map(([k,d]) => `<option value="${k}">${d.label}</option>`).join('');
+    gel('cv-fromu').innerHTML = opts;
+    gel('cv-tou').innerHTML = opts;
+    gel('cv-fromu').value = 'kpa';
+    gel('cv-tou').value = 'mh2o';
+  }
+  convert();
+  showView('v-conv');
+}
+
+function swapUnits() {
+  const a = gel('cv-fromu').value;
+  gel('cv-fromu').value = gel('cv-tou').value;
+  gel('cv-tou').value = a;
+  const v = parseFloat(gel('cv-to').value.replace(/,/g,''));
+  if (isFinite(v)) gel('cv-from').value = v;
+  convert();
+}
+
+function convert(groupChanged) {
+  const fu = UNITS[gel('cv-fromu').value];
+  let tuKey = gel('cv-tou').value;
+  if (groupChanged || UNITS[tuKey].group !== fu.group) {
+    const same = Object.keys(UNITS).filter(k => UNITS[k].group === fu.group);
+    if (!same.includes(tuKey)) {
+      tuKey = same.find(k => k !== gel('cv-fromu').value) || same[0];
+      gel('cv-tou').value = tuKey;
+    }
+  }
+  const tu = UNITS[tuKey];
+  const err = gel('cv-err');
+  const dp = Math.min(8, Math.max(0, parseInt(gel('cv-dp').value) || 0));
+  const v = parseFloat(gel('cv-from').value);
+  err.style.display = 'none';
+  if (!isFinite(v)) {
+    gel('cv-to').value = '';
+    gel('cv-result').textContent = 'Enter a value to convert.';
+    return;
+  }
+  try {
+    const out = tu.fromBase(fu.toBase(v));
+    const shown = new Intl.NumberFormat('en-NZ', {minimumFractionDigits:dp, maximumFractionDigits:dp}).format(out);
+    gel('cv-to').value = shown;
+    gel('cv-result').innerHTML = `<strong>${v}</strong> ${esc(fu.label)} = <strong>${shown}</strong> ${esc(tu.label)}`;
+  } catch (e) {
+    gel('cv-to').value = '';
+    err.textContent = e.message;
+    err.style.display = 'block';
+  }
+}
+
+/* ==========================================================================
+   Overpressure check
+   ========================================================================== */
+function showOverpressure() {
+  const sel = gel('op-sensor');
+  if (!S.sensors.length) {
+    sel.innerHTML = '<option value="-1">No sensors configured</option>';
+  } else {
+    sel.innerHTML = S.sensors.map((s,i) =>
+      `<option value="${i}" ${S.active && S.active.piezo_id===s.piezo_id?'selected':''}>${esc(s.piezo_id)} (Ch ${esc(s.channel_number||'?')})</option>`
+    ).join('');
+  }
+  opSensorChanged();
+  showView('v-op');
+}
+
+function opSensorChanged() {
+  const s = S.sensors[parseInt(gel('op-sensor').value)];
+  if (s) {
+    gel('op-rated').value = s.rated_pressure_kpa ?? '';
+    gel('op-temp').value = s.temp_zero_reading ?? 20;
+  }
+  calcOverpressure();
+}
+
+function calcOverpressure() {
+  const s = S.sensors[parseInt(gel('op-sensor').value)];
+  const err = gel('op-err');
+  const tb = gel('op-tbody');
+  const info = gel('op-info');
+  err.style.display = 'none';
+  if (!s) { tb.innerHTML = '<tr><td colspan="5">Add a sensor first.</td></tr>'; info.innerHTML = ''; return; }
+
+  const rated = gnum('op-rated', NaN);
+  const tempC = gnum('op-temp', s.temp_zero_reading ?? 20);
+  const extra = gnum('op-extra', NaN);
+
+  const R0 = s.freq_zero_reading;
+  const pAtZero = pFromDigits(s, R0, tempC);
+  info.innerHTML = `
+    <div class="row"><span class="k">Equation</span><span class="v">${EQS[normEq(s.equation_type)].label}</span></div>
+    <div class="row"><span class="k">R0 (digits) / Hz</span><span class="v">${R0} / ${dig2hz(R0).toFixed(2)}</span></div>
+    <div class="row"><span class="k">Pressure at R0 and ${f2(tempC)} ${DEG}</span><span class="v">${pAtZero.toFixed(3)} kPa</span></div>`;
+
+  if (!isFinite(rated) || rated <= 0) {
+    tb.innerHTML = '<tr><td colspan="5">Enter the rated pressure for this sensor.</td></tr>';
+    err.textContent = 'No rated pressure stored for this sensor. Add it on the calibration form so it is remembered.';
+    err.style.display = s.rated_pressure_kpa ? 'none' : 'block';
+    return;
+  }
+
+  const cases = [
+    ['Rated', 1],
+    ['1.25 x rated', 1.25],
+    ['1.5 x rated', 1.5]
+  ];
+  if (isFinite(extra) && extra > 0) cases.push([`${extra} x rated`, extra]);
+
+  const rows = cases.map(([label, k]) => {
+    const target = rated * k;
+    const dig = digitsForPressure(s, target, tempC);
+    if (!isFinite(dig)) {
+      return `<tr><td>${label}</td><td>${f2(target)}</td><td colspan="3" style="color:var(--warn)">No solution in range</td></tr>`;
+    }
+    const head = target / 9.80665;
+    return `<tr><td>${label}</td><td><strong>${f2(target)}</strong></td>
+      <td>${dig.toFixed(2)}</td><td>${dig2hz(dig).toFixed(2)}</td><td>${f2(head)}</td></tr>`;
+  });
+  tb.innerHTML = rows.join('');
+}
+
+/* ==========================================================================
+   Site notes
+   ========================================================================== */
+const nkey = () => `ppc_notes_${S.loggerId || 'general'}`;
+function loadNotes() { try { return JSON.parse(localStorage.getItem(nkey()) || '[]'); } catch { return []; } }
+function saveNotes(a) { localStorage.setItem(nkey(), JSON.stringify(a)); }
+
+function localNow() {
+  const d = new Date(), p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function noteNow() { gel('nt-when').value = localNow(); }
+
+function addNote() {
+  const text = gel('nt-text').value.trim();
+  if (!text) { toast('Write a note first', 'err'); return; }
+  const when = gel('nt-when').value || localNow();
+  const arr = loadNotes();
+  arr.push({ts: when.replace('T',' '), text});
+  saveNotes(arr);
+  gel('nt-text').value = '';
+  noteNow();
+  renderNotes();
+  toast('Note added', 'ok');
+}
+
+function deleteNote(ts, i) {
+  const arr = loadNotes();
+  const idx = arr.findIndex(n => n.ts === ts && n.text === decodeURIComponent(i));
+  if (idx >= 0) { arr.splice(idx,1); saveNotes(arr); renderNotes(); }
+}
+
+function renderNotes() {
+  if (!gel('nt-when').value) noteNow();
+  const entries = loadNotes().map(n => ({ts:n.ts, text:n.text, rd:false}));
+  if (showReadings) entries.push(...readingEntries());
+  entries.sort((a,b) => a.ts < b.ts ? 1 : (a.ts > b.ts ? -1 : 0));
+
+  const list = gel('nt-list');
+  if (!entries.length) {
+    list.innerHTML = '<p class="hint" style="margin:0">No notes yet. Notes are kept per logger and are not tied to a single day.</p>';
+    return;
+  }
+  let html = '', day = null;
+  entries.forEach(n => {
+    const d = n.ts.slice(0,10);
+    if (d !== day) { if (day !== null) html += '</div>'; html += `<div class="daygroup"><div class="dayhead">${d}</div>`; day = d; }
+    html += `<div class="note${n.rd?' rd':''}">
+      <span class="time">${esc(n.ts.slice(11,16))}</span>
+      <span class="txt">${n.rd ? n.text : esc(n.text)}</span>
+      ${n.rd ? '' : `<button class="del" title="Delete" onclick="deleteNote('${esc(n.ts)}','${encodeURIComponent(n.text)}')">&#215;</button>`}
+    </div>`;
+  });
+  html += '</div>';
+  list.innerHTML = html;
+}
+
+// Logged readings folded into the timeline, one entry per round timestamp.
+function readingEntries() {
+  const byTs = {};
+  S.sensors.forEach(s => loadReadings(s.piezo_id).forEach(r => {
+    const key = String(r.ts).slice(0,16);
+    (byTs[key] = byTs[key] || []).push({s, r});
+  }));
+  return Object.entries(byTs).map(([ts, items]) => {
+    const parts = items.map(({s,r}) => {
+      const ri = ratedInfo(s, +r.pore_pressure_kPa);
+      return `<b>${esc(s.piezo_id)}</b> <span class="${ri?ri.cls:''}">${(+r.pore_pressure_kPa).toFixed(1)} kPa</span>`;
+    });
+    const comment = (items.find(i => i.r.comment) || {r:{}}).r.comment;
+    return {ts, rd:true, text: parts.join(' &nbsp; ') + (comment ? `<br><span style="color:var(--muted)">${esc(comment)}</span>` : '')};
+  });
+}
+
+let showReadings = false;
+function toggleReadingsInNotes() {
+  showReadings = !showReadings;
+  const b = gel('nt-rd-btn');
+  b.classList.toggle('btn-tonal', showReadings);
+  b.classList.toggle('btn-ghost', !showReadings);
+  b.textContent = showReadings ? 'Hide readings' : 'Show readings in timeline';
+  renderNotes();
+}
+
+/* --- Readings import ------------------------------------------------------ */
+function pickReadingsFile() {
+  if (!S.loggerId) { toast('Start a session first', 'err'); return; }
+  const f = gel('rd-file');
+  f.value = '';
+  f.click();
+}
+
+function importReadingsFile(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try { applyReadingsCsv(parseCsv(reader.result)); }
+    catch (e) { toast(e.message || 'Could not read that CSV', 'err'); }
+  };
+  reader.readAsText(file);
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [], cell = '', q = false;
+  const s = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (q) {
+      if (c === '"') { if (s[i+1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += c;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(v => v !== ''));
+}
+
+function applyReadingsCsv(rows) {
+  if (rows.length < 2) { toast('That CSV has no data rows', 'err'); return; }
+  const head = rows[0].map(h => h.trim().toLowerCase());
+  const col = (...names) => { for (const n of names) { const i = head.indexOf(n); if (i >= 0) return i; } return -1; };
+  const iTs  = col('timestamp','ts');
+  const iPid = col('piezo_id','piezo','sensor');
+  const iP   = col('pore_pressure_kpa','pressure_kpa','p_kpa');
+  if (iTs < 0 || iPid < 0 || iP < 0) {
+    toast('Need Timestamp, Piezo_ID and Pore_Pressure_kPa columns', 'err');
+    return;
+  }
+  const iDig = col('freq_digits'), iFi = col('freq_input'), iFu = col('freq_input_units');
+  const iTi = col('temp_input'), iTu = col('temp_input_units'), iTc = col('temp_celsius');
+  const iRnd = col('round'), iCom = col('comment'), iLog = col('logger_id');
+
+  const byPid = {};
+  rows.slice(1).forEach(r => {
+    const pid = (r[iPid] || '').trim();
+    if (!pid) return;
+    (byPid[pid] = byPid[pid] || []).push({
+      ts: (r[iTs] || '').trim(),
+      logger_id: iLog >= 0 ? r[iLog] : S.loggerId,
+      piezo_id: pid,
+      round: iRnd >= 0 ? r[iRnd] : '',
+      freq_input: iFi >= 0 ? +r[iFi] : (iDig >= 0 ? +r[iDig] : NaN),
+      freq_input_units: iFu >= 0 ? r[iFu] : 'Digits',
+      freq_digits: iDig >= 0 ? +r[iDig] : NaN,
+      temp_input: iTi >= 0 ? +r[iTi] : (iTc >= 0 ? +r[iTc] : NaN),
+      temp_input_units: iTu >= 0 ? r[iTu] : 'Celsius',
+      temp_celsius: iTc >= 0 ? +r[iTc] : NaN,
+      pore_pressure_kPa: +r[iP],
+      comment: iCom >= 0 ? r[iCom] : ''
+    });
+  });
+
+  let added = 0, skipped = 0, unknown = [];
+  Object.entries(byPid).forEach(([pid, recs]) => {
+    if (!S.sensors.find(s => s.piezo_id === pid)) unknown.push(pid);
+    const existing = loadReadings(pid);
+    const seen = new Set(existing.map(r => r.ts + '|' + r.pore_pressure_kPa));
+    recs.forEach(r => {
+      const key = r.ts + '|' + r.pore_pressure_kPa;
+      if (seen.has(key)) { skipped++; return; }
+      seen.add(key); existing.push(r); added++;
+    });
+    existing.sort((a,b) => a.ts < b.ts ? -1 : 1);
+    localStorage.setItem(rk(S.loggerId, pid), JSON.stringify(existing));
+  });
+
+  showReadings = true;
+  const b = gel('nt-rd-btn');
+  b.classList.add('btn-tonal'); b.classList.remove('btn-ghost');
+  b.textContent = 'Hide readings';
+  renderNotes();
+  toast(`${added} reading(s) imported, ${skipped} duplicate(s) skipped`, 'ok');
+  if (unknown.length) toast(`No calibration loaded for: ${unknown.join(', ')}`, 'err');
+}
+
+function downloadNotes() {
+  const arr = loadNotes().slice().sort((a,b) => a.ts < b.ts ? -1 : 1);
+  if (!arr.length) { toast('No notes to export', 'err'); return; }
+  saveCsv([['Timestamp','Logger_ID','Note'], ...arr.map(n => [n.ts, S.loggerId||'', n.text])],
+    `${S.loggerId||'site'}_notes.csv`);
+}
+function clearNotes() {
+  if (!loadNotes().length) return;
+  if (!confirm('Delete all notes for this logger?')) return;
+  saveNotes([]);
+  renderNotes();
+  toast('Notes cleared');
+}
+
+/* ==========================================================================
+   View calibration
+   ========================================================================== */
+function showCalView(mode) {
+  const sensors = mode === 'single' ? (S.active ? [S.active] : []) : S.sensors;
+  gel('cal-content').innerHTML = sensors.length
+    ? sensors.map(calCard).join('')
+    : '<p class="hint" style="margin:0">No sensor to display.</p>';
+  showView('v-cal');
+}
+function calCard(s) {
+  const eq = normEq(s.equation_type);
+  const eqRows = EQS[eq].kind === 'linear' ? `
+    <tr><td>G &ndash; Linear gauge factor</td><td>${s.linear_gauge_factor??'\u2014'}</td></tr>
+    <tr><td>K &ndash; Temp coefficient</td><td>${s.temp_coefficient??'\u2014'}</td></tr>
+    <tr><td>D &ndash; Offset</td><td>${s.offset??'\u2014'}</td></tr>` : `
+    <tr><td>A &ndash; Poly coefficient A</td><td>${s.poly_coefficient_A??'\u2014'}</td></tr>
+    <tr><td>B &ndash; Poly coefficient B</td><td>${s.poly_coefficient_B??'\u2014'}</td></tr>
+    <tr><td>C &ndash; Poly intercept</td><td>${s.poly_coefficient_C??'\u2014'}</td></tr>
+    <tr><td>K &ndash; Temp coefficient</td><td>${s.temp_coefficient??'\u2014'}</td></tr>
+    <tr><td>D &ndash; Offset</td><td>${s.offset??0}</td></tr>`;
+  return `<div style="margin-bottom:20px">
+    <div class="item" style="cursor:default;margin-bottom:10px">
+      <div class="body"><div class="t">${esc(s.piezo_id)} <span class="badge">Ch ${esc(s.channel_number||'?')}</span></div>
+      <div class="m">${EQS[eq].label} &middot; ${esc(s.equation_units||'hertz')}</div></div>
+    </div>
+    <div class="al al-info" style="font-family:var(--mono);font-size:.76rem">${EQS[eq].formula}</div>
+    <table class="caltbl">
+      <tr><td>Serial number</td><td>${esc(s.piezo_serial||'\u2014')}</td></tr>
+      <tr><td>Colour / identifier</td><td>${esc(s.piezo_colour||'\u2014')}</td></tr>
+      <tr><td>Line / grid reference</td><td>${esc(s.line||'\u2014')}</td></tr>
+      <tr><td>Factory calibration</td><td>${s.factory_calibration?'Yes':'No'}</td></tr>
+      <tr><td>Rated pressure (kPa)</td><td>${s.rated_pressure_kpa??'\u2014'}</td></tr>
+      <tr><td>Frequency units</td><td>${esc(s.equation_units||'hertz')}</td></tr>
+      <tr><td>Equation type</td><td>${EQS[eq].label}</td></tr>
+      <tr><td>R0 &ndash; Freq zero (digits)</td><td>${s.freq_zero_reading??'\u2014'}</td></tr>
+      <tr><td>T0 &ndash; Temp at zero (${DEG})</td><td>${s.temp_zero_reading??'\u2014'}</td></tr>
+      ${eqRows}
+      <tr><td>Thermistor A</td><td>${s.thermistor_coefficient_A??DA}</td></tr>
+      <tr><td>Thermistor B</td><td>${s.thermistor_coefficient_B??DB}</td></tr>
+      <tr><td>Thermistor C</td><td>${s.thermistor_coefficient_C??DC}</td></tr>
+    </table>
+  </div>`;
+}
+
+/* ==========================================================================
+   Field zero
+   ========================================================================== */
+function showFieldZero() {
+  if (!S.active) { toast('No active sensor', 'err'); return; }
+  const s = S.active;
+  gel('fz-sinfo').innerHTML =
+    `<strong>${esc(s.piezo_id)}</strong> <span class="badge">Ch ${esc(s.channel_number||'?')}</span><br>S/N ${esc(s.piezo_serial||'\u2014')}`;
+  gel('fz-current').innerHTML = fzTable(s.freq_zero_reading, s.temp_zero_reading);
+  gel('fz-freq-lbl').textContent = `Frequency (${freqUnitLabel()})`;
+  gel('fz-temp-lbl').textContent = `Temperature (${tempUnitLabel()})`;
+  gel('fz-freq').value = '';
+  gel('fz-temp').value = '';
+  gel('fz-err').style.display = 'none';
+  gel('fz-preview').style.display = 'none';
+  S.fzR0 = null; S.fzT0 = null;
+  showView('v-fz');
+  setTimeout(() => gel('fz-freq').focus(), 80);
+}
+function fzTable(R0, T0) {
+  return `<table class="caltbl">
+    <tr><td>Current R0 (digits)</td><td>${R0}</td></tr>
+    <tr><td>Current T0 (${DEG})</td><td>${T0}</td></tr>
+  </table>`;
+}
+function submitFieldZero() {
+  const f = parseFloat(gel('fz-freq').value);
+  const t = parseFloat(gel('fz-temp').value);
+  const err = gel('fz-err'); err.style.display = 'none';
+  if (isNaN(f) || isNaN(t)) { err.textContent = 'Enter valid numbers.'; err.style.display = 'block'; return; }
+  const Ri = S.freqIsHz ? hz2dig(f) : f;
+  const Ti = S.tempIsOhms
+    ? ohms2c(t, S.active.thermistor_coefficient_A, S.active.thermistor_coefficient_B, S.active.thermistor_coefficient_C)
+    : t;
+  S.fzR0 = parseFloat(Ri.toFixed(6));
+  S.fzT0 = parseFloat(Ti.toFixed(6));
+  gel('fz-preview-box').innerHTML = `
+    <div class="row"><span class="k">New R0 (digits)</span><span class="v">${S.fzR0}</span></div>
+    <div class="row"><span class="k">New T0 (${DEG})</span><span class="v">${isNaN(S.fzT0)?'NaN':S.fzT0}</span></div>`;
+  gel('fz-preview').style.display = 'block';
+}
+function confirmFieldZero() {
+  if (S.fzR0 === null) return;
+  S.active.freq_zero_reading = S.fzR0;
+  S.active.temp_zero_reading = S.fzT0;
+  const idx = S.sensors.findIndex(s => s.piezo_id === S.active.piezo_id);
+  if (idx >= 0) S.sensors[idx] = S.active;
+  saveSensors();
+  S.fzR0 = null; S.fzT0 = null;
+  gel('fz-current').innerHTML = fzTable(S.active.freq_zero_reading, S.active.temp_zero_reading);
+  gel('fz-preview').style.display = 'none';
+  gel('fz-freq').value = '';
+  gel('fz-temp').value = '';
+  toast('Zero reference updated', 'ok');
+  renderSetup();
+}
+function cancelFieldZero() { S.fzR0 = null; S.fzT0 = null; gel('fz-preview').style.display = 'none'; }
+
+/* ==========================================================================
+   Add / edit sensor
+   ========================================================================== */
+function showAddSensor() {
+  S.editingPiezoId = null;
+  gel('calform-title').textContent = 'Add new sensor';
+  renderCalForm(null);
+  showView('v-calform');
+}
+function showEditSensor() {
+  if (!S.sensors.length) { toast('No sensors to edit', 'err'); return; }
+  if (S.sensors.length === 1) { showView('v-calform'); startEdit(0); return; }
+  S.editingPiezoId = null;
+  gel('calform-title').textContent = 'Edit sensor';
+  gel('calform-content').innerHTML = S.sensors.map((s,i) =>
+    `<div class="item" onclick="startEdit(${i})">
+      <div class="num">${i+1}</div>
+      <div class="body"><div class="t">${esc(s.piezo_id)}</div>
+      <div class="m">Ch ${esc(s.channel_number||'?')} &middot; S/N ${esc(s.piezo_serial||'\u2014')}</div></div>
+    </div>`).join('');
+  showView('v-calform');
+}
+function startEdit(idx) {
+  S.editingPiezoId = S.sensors[idx].piezo_id;
+  gel('calform-title').textContent = `Edit \u2014 ${S.sensors[idx].piezo_id}`;
+  renderCalForm(S.sensors[idx]);
+  showView('v-calform');
+}
+
+function renderCalForm(ex) {
+  ex = ex || {};
+  const defEq = normEq(ex.equation_type);
+  const isLin = EQS[defEq].kind === 'linear';
+  gel('calform-content').innerHTML = `
+    <div class="fg"><label>Piezo ID <span class="req">*</span></label>
+      <input type="text" id="cf-id" value="${esc(ex.piezo_id||'')}" placeholder="e.g. G2" autocomplete="off"></div>
+    <div class="frow">
+      <div class="fg"><label>Channel number</label>
+        <input type="number" id="cf-ch" value="${esc(ex.channel_number||S.sensors.length+1)}" min="1"></div>
+      <div class="fg"><label>Serial number</label>
+        <input type="text" id="cf-sn" value="${esc(ex.piezo_serial||'')}" placeholder="e.g. 1432-G" autocomplete="off"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Colour / identifier</label>
+        <input type="text" id="cf-col" value="${esc(ex.piezo_colour||'')}" placeholder="e.g. Yellow tape" autocomplete="off"></div>
+      <div class="fg"><label>Line / grid ref <span class="opt">(optional)</span></label>
+        <input type="text" id="cf-line" value="${esc(ex.line||'')}" placeholder="e.g. A-A" autocomplete="off"></div>
+    </div>
+    <div class="fg"><label>Rated pressure (kPa) <span class="opt">used by the overpressure check</span></label>
+      <input type="number" id="cf-rated" step="any" inputmode="decimal" value="${ex.rated_pressure_kpa??''}" placeholder="e.g. 350"></div>
+    <div class="switch-row">
+      <div><div class="sl">Factory calibration</div><div class="ss">Manufacturer sheet supplied</div></div>
+      <div class="seg">
+        <button type="button" id="cf-fac-y" onclick="setFactoryCal(true)" class="${ex.factory_calibration===true?'on':''}">Yes</button>
+        <button type="button" id="cf-fac-n" onclick="setFactoryCal(false)" class="${ex.factory_calibration!==true?'on':''}">No</button>
+      </div>
+      <input type="hidden" id="cf-fac" value="${ex.factory_calibration===true?'true':'false'}">
+    </div>
+    <div class="switch-row">
+      <div><div class="sl">Coefficient units</div><div class="ss">Units the calibration factors expect</div></div>
+      <div class="seg">
+        <button type="button" id="cf-units-hz" onclick="setFreqUnits('hertz')" class="${(ex.equation_units||'hertz')==='hertz'?'on':''}">Hertz</button>
+        <button type="button" id="cf-units-dig" onclick="setFreqUnits('digits')" class="${ex.equation_units==='digits'?'on':''}">Digits</button>
+      </div>
+      <input type="hidden" id="cf-units" value="${esc(ex.equation_units||'hertz')}">
+    </div>
+    <div class="fg" style="margin-top:14px"><label>Equation type</label>
+      <select id="cf-eq" onchange="toggleEq()">
+        ${Object.keys(EQS).map(k => `<option value="${k}" ${defEq===k?'selected':''}>${EQS[k].label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="al al-info" style="font-family:var(--mono);font-size:.76rem" id="cf-eq-formula">${EQS[defEq].formula}</div>
+    <p class="hint" id="cf-eq-note" style="margin-top:-4px">${EQS[defEq].note}</p>
+    <hr>
+    <div class="card-title">Thermistor coefficients (Steinhart-Hart)</div>
+    <div class="frow3">
+      <div class="fg"><label>A</label><input type="number" id="cf-tA" step="any" value="${ex.thermistor_coefficient_A??DA}"></div>
+      <div class="fg"><label>B</label><input type="number" id="cf-tB" step="any" value="${ex.thermistor_coefficient_B??DB}"></div>
+      <div class="fg"><label>C</label><input type="number" id="cf-tC" step="any" value="${ex.thermistor_coefficient_C??DC}"></div>
+    </div>
+    <hr>
+    <div class="card-title">Zero readings <span style="text-transform:none;letter-spacing:0;font-weight:400">R0 in digits = f&sup2;/1000</span></div>
+    <div class="frow">
+      <div class="fg"><label>R0 &ndash; Freq zero (digits) <span class="req">*</span></label>
+        <input type="number" id="cf-R0" step="any" value="${ex.freq_zero_reading??''}"></div>
+      <div class="fg"><label>T0 &ndash; Temp at zero (${DEG}) <span class="req">*</span></label>
+        <input type="number" id="cf-T0" step="any" value="${ex.temp_zero_reading??''}"></div>
+    </div>
+    <hr>
+    <div id="cf-lin" style="${isLin?'':'display:none'}">
+      <div class="card-title">Linear factors</div>
+      <div class="frow">
+        <div class="fg"><label>G &ndash; Gauge factor <span class="req">*</span></label>
+          <input type="number" id="cf-G" step="any" value="${ex.linear_gauge_factor??''}"></div>
+        <div class="fg"><label>K &ndash; Temp coefficient <span class="req">*</span></label>
+          <input type="number" id="cf-K" step="any" value="${ex.temp_coefficient??''}"></div>
+      </div>
+      <div class="fg"><label>D &ndash; Offset</label>
+        <input type="number" id="cf-D" step="any" value="${ex.offset??0}"></div>
+    </div>
+    <div id="cf-poly" style="${isLin?'display:none':''}">
+      <div class="card-title">Polynomial coefficients</div>
+      <div class="frow3">
+        <div class="fg"><label>A <span class="req">*</span></label>
+          <input type="number" id="cf-pA" step="any" value="${ex.poly_coefficient_A??''}"></div>
+        <div class="fg"><label>B <span class="req">*</span></label>
+          <input type="number" id="cf-pB" step="any" value="${ex.poly_coefficient_B??''}"></div>
+        <div class="fg"><label>C <span class="req">*</span></label>
+          <input type="number" id="cf-pC" step="any" value="${ex.poly_coefficient_C??''}"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>K &ndash; Temp coefficient</label>
+          <input type="number" id="cf-pK" step="any" value="${ex.temp_coefficient??0}"></div>
+        <div class="fg"><label>D &ndash; Offset</label>
+          <input type="number" id="cf-pD" step="any" value="${ex.offset??0}"></div>
+      </div>
+    </div>
+    <div id="cf-err" class="al al-err" style="display:none;margin-top:10px"></div>
+    <button class="btn btn-success" style="margin-top:14px" onclick="saveCalForm()">Save sensor</button>`;
+}
+
+function toggleEq() {
+  const eq = gel('cf-eq').value;
+  const lin = EQS[eq].kind === 'linear';
+  gel('cf-lin').style.display  = lin ? '' : 'none';
+  gel('cf-poly').style.display = lin ? 'none' : '';
+  gel('cf-eq-formula').textContent = EQS[eq].formula;
+  gel('cf-eq-note').textContent = EQS[eq].note;
+}
+function setFactoryCal(val) {
+  gel('cf-fac').value = val ? 'true' : 'false';
+  gel('cf-fac-y').classList.toggle('on',  val);
+  gel('cf-fac-n').classList.toggle('on', !val);
+}
+function setFreqUnits(val) {
+  gel('cf-units').value = val;
+  gel('cf-units-hz').classList.toggle('on',  val === 'hertz');
+  gel('cf-units-dig').classList.toggle('on', val === 'digits');
+}
+
+function saveCalForm() {
+  const err = gel('cf-err'); err.style.display = 'none';
+  const pid = gel('cf-id').value.trim();
+  if (!pid) { err.textContent = 'Piezo ID is required.'; err.style.display = 'block'; return; }
+  const R0 = parseFloat(gel('cf-R0').value);
+  const T0 = parseFloat(gel('cf-T0').value);
+  if (isNaN(R0) || isNaN(T0)) { err.textContent = 'R0 and T0 are required.'; err.style.display = 'block'; return; }
+  const eq = gel('cf-eq').value;
+  const sensor = {
+    line: gel('cf-line').value.trim() || null,
+    piezo_id: pid,
+    channel_number: gel('cf-ch').value,
+    piezo_serial: gel('cf-sn').value.trim(),
+    piezo_colour: gel('cf-col').value.trim(),
+    factory_calibration: gel('cf-fac').value === 'true',
+    equation_type: eq,
+    rated_pressure_kpa: isFinite(parseFloat(gel('cf-rated').value)) ? parseFloat(gel('cf-rated').value) : null,
+    thermistor_coefficient_A: parseFloat(gel('cf-tA').value)||DA,
+    thermistor_coefficient_B: parseFloat(gel('cf-tB').value)||DB,
+    thermistor_coefficient_C: parseFloat(gel('cf-tC').value)||DC,
+    freq_zero_reading: R0,
+    temp_zero_reading: T0,
+    pressure_units: 'kPa',
+    equation_units: gel('cf-units').value
+  };
+  if (EQS[eq].kind === 'linear') {
+    const G = parseFloat(gel('cf-G').value);
+    if (isNaN(G)) { err.textContent = 'Gauge factor G is required.'; err.style.display = 'block'; return; }
+    sensor.linear_gauge_factor = G;
+    sensor.temp_coefficient = parseFloat(gel('cf-K').value)||0;
+    sensor.offset = parseFloat(gel('cf-D').value)||0;
+    sensor.poly_coefficient_A = sensor.poly_coefficient_B = sensor.poly_coefficient_C = null;
+  } else {
+    const Ap = parseFloat(gel('cf-pA').value);
+    const Bp = parseFloat(gel('cf-pB').value);
+    const Cp = parseFloat(gel('cf-pC').value);
+    if (isNaN(Ap)||isNaN(Bp)||isNaN(Cp)) { err.textContent = 'A, B and C are all required.'; err.style.display = 'block'; return; }
+    sensor.poly_coefficient_A = Ap; sensor.poly_coefficient_B = Bp; sensor.poly_coefficient_C = Cp;
+    sensor.temp_coefficient = parseFloat(gel('cf-pK').value)||0;
+    sensor.offset = parseFloat(gel('cf-pD').value)||0;
+    sensor.linear_gauge_factor = null;
+  }
+  if (S.editingPiezoId) {
+    const idx = S.sensors.findIndex(s => s.piezo_id === S.editingPiezoId);
+    if (idx >= 0) S.sensors[idx] = sensor; else S.sensors.push(sensor);
+  } else {
+    if (S.sensors.find(s => s.piezo_id === pid)) {
+      err.textContent = `Sensor "${pid}" already exists. Use Edit to modify it.`;
+      err.style.display = 'block'; return;
+    }
+    S.sensors.push(sensor);
+  }
+  S.sensors.sort((a,b) => (parseInt(a.channel_number)||0) - (parseInt(b.channel_number)||0));
+  saveSensors();
+  if (!S.active) S.active = sensor;
+  else if (S.active.piezo_id === (S.editingPiezoId||pid)) S.active = sensor;
+  updateSB(); renderSetup(); showView('v-setup');
+  toast(`Saved ${pid}`, 'ok');
+}
+
+/* ==========================================================================
+   Unit converter
+   ========================================================================== */
+
+/* ==========================================================================
+   Readings log
+   ========================================================================== */
+function renderLog() {
+  const btns = gel('log-sensor-btns');
+  if (!S.sensors || !S.sensors.length) {
+    btns.innerHTML = '<p class="hint" style="margin:0">No sensors in this session.</p>';
+    return;
+  }
+  btns.innerHTML = '<div class="btn-row">'
+    + S.sensors.map(s => `<button class="btn btn-neutral btn-sm" onclick="showLogSensor('${esc(s.piezo_id)}')">${esc(s.piezo_id)}</button>`).join('')
+    + '</div>';
+  if (S.active) showLogSensor(S.active.piezo_id);
+}
+function showLogSensor(pid) {
+  S.logPiezoId = pid;
+  const readings = loadReadings(pid);
+  gel('log-table-wrap').style.display = readings.length ? 'block' : 'none';
+  gel('log-empty').style.display = readings.length ? 'none' : 'block';
+  if (!readings.length) return;
+  gel('log-thead').innerHTML =
+    `<th>Timestamp</th><th>Freq in</th><th>Units</th><th>Freq digits</th><th>Temp in</th><th>Units</th><th>Temp ${DEG}</th><th>P (kPa)</th><th>Comment</th>`;
+  gel('log-tbody').innerHTML = readings.slice().reverse().map(r => `
+    <tr><td>${esc(r.ts)}</td><td>${(+r.freq_input).toFixed(3)}</td><td>${esc(r.freq_input_units||'Hz')}</td>
+    <td>${(+r.freq_digits).toFixed(3)}</td>
+    <td>${(+r.temp_input).toFixed(3)}</td><td>${esc(r.temp_input_units||DEG)}</td>
+    <td>${isNaN(r.temp_celsius)?'\u2014':(+r.temp_celsius).toFixed(3)}</td>
+    <td><strong>${(+r.pore_pressure_kPa).toFixed(4)}</strong></td>
+    <td>${esc(r.comment||'')}</td></tr>`).join('');
+  gel('log-count').textContent = `${readings.length} reading(s) for ${pid}`;
+}
+function downloadCSV() {
+  if (!S.logPiezoId) return;
+  const readings = loadReadings(S.logPiezoId);
+  if (!readings.length) { toast('No readings to export', 'err'); return; }
+  const sensor = S.sensors.find(s => s.piezo_id === S.logPiezoId) || {};
+  const rated = parseFloat(sensor.rated_pressure_kpa);
+  const hdr = ['Timestamp','Logger_ID','Piezo_ID','Round',
+               'Freq_Input','Freq_Input_Units','Freq_Digits',
+               'Temp_Input','Temp_Input_Units','Temp_Celsius',
+               'Pore_Pressure_kPa','Rated_kPa','Percent_Of_Rated','Comment'];
+  const rows = readings.map(r => [
+    r.ts, r.logger_id, r.piezo_id, r.round ?? '',
+    r.freq_input, r.freq_input_units || 'Hz', r.freq_digits,
+    r.temp_input, r.temp_input_units || 'Celsius',
+    isNaN(r.temp_celsius) ? '' : r.temp_celsius,
+    r.pore_pressure_kPa,
+    isFinite(rated) ? rated : '',
+    isFinite(rated) && rated > 0 ? (r.pore_pressure_kPa / rated * 100).toFixed(2) : '',
+    r.comment || ''
+  ]);
+  saveCsv([hdr, ...rows], `${S.loggerId}_${S.logPiezoId}_readings.csv`);
+}
+function clearReadings() {
+  if (!S.logPiezoId) return;
+  if (!confirm(`Clear ALL readings for ${S.logPiezoId}? This cannot be undone.`)) return;
+  localStorage.removeItem(rk(S.loggerId, S.logPiezoId));
+  gel('log-table-wrap').style.display = 'none';
+  gel('log-empty').style.display = 'block';
+  toast('Readings cleared');
+}
+function saveCsv(rows, filename) {
+  const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  downloadBlob(new Blob([csv], {type:'text/csv'}), filename);
+}
+function downloadBlob(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ==========================================================================
+   Calibration backup - export / import
+   ========================================================================== */
+function exportCals() {
+  if (!S.sensors.length) { toast('No calibrations to export', 'err'); return; }
+  const payload = {[S.loggerId]: S.sensors};
+  downloadBlob(new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'}),
+    `${S.loggerId}_calibration.json`);
+  toast(`Exported ${S.sensors.length} calibration(s)`, 'ok');
+}
+
+function pickCalFile() {
+  const f = gel('cal-file');
+  f.value = '';
+  f.click();
+}
+
+function importCalFile(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let data;
+    try { data = JSON.parse(reader.result); }
+    catch { toast('That file is not valid JSON', 'err'); return; }
+    applyImport(data, file.name);
+  };
+  reader.readAsText(file);
+}
+
+// Accepts {logger:[...]}, a bare array, or a single sensor object.
+function applyImport(data, filename) {
+  let logger = null, list = null;
+  if (Array.isArray(data)) list = data;
+  else if (data && typeof data === 'object') {
+    if (data.piezo_id) list = [data];
+    else {
+      const keys = Object.keys(data).filter(k => Array.isArray(data[k]));
+      if (keys.length) {
+        logger = keys[0];
+        list = keys.reduce((acc,k) => acc.concat(data[k]), []);
+      }
+    }
+  }
+  if (!list || !list.length) { toast('No calibrations found in that file', 'err'); return; }
+  list = list.filter(s => s && s.piezo_id);
+  if (!list.length) { toast('No sensors with a piezo_id in that file', 'err'); return; }
+
+  if (!S.loggerId) {
+    const guess = logger || filename.replace(/\.json$/i,'').replace(/_calibration$/i,'');
+    S.loggerId = guess;
+    gel('inp-logger').value = guess;
+    S.sensors = loadSensors(guess);
+    addRecent(guess);
+  } else if (logger && logger !== S.loggerId &&
+             !confirm(`This file is for logger "${logger}" but the open session is "${S.loggerId}".\nImport into "${S.loggerId}" anyway?`)) {
+    return;
+  }
+
+  let added = 0, updated = 0;
+  list.forEach(s => {
+    const idx = S.sensors.findIndex(x => x.piezo_id === s.piezo_id);
+    if (idx >= 0) { S.sensors[idx] = s; updated++; }
+    else { S.sensors.push(s); added++; }
+  });
+  S.sensors.sort((a,b) => (parseInt(a.channel_number)||0) - (parseInt(b.channel_number)||0));
+  saveSensors();
+  if (!S.active) S.active = S.sensors[0];
+  addRecent(S.loggerId);
+  renderRecent();
+  updateSB();
+  renderSetup();
+  showView('v-setup');
+  toast(`Imported ${added} new, ${updated} updated`, 'ok');
+}
+
+/* ==========================================================================
+   Installation planner
+   ========================================================================== */
+const IK = 'ppc_install_plan';
+
+const COLOURS = {
+  Red:'#ef4444', Blue:'#3b82f6', Green:'#22c55e', Yellow:'#eab308', Orange:'#f97316',
+  Purple:'#a855f7', Pink:'#ec4899', Brown:'#a16207', Black:'#e5e7eb', White:'#f8fafc',
+  Grey:'#9ca3af', Clear:'#7dd3fc'
+};
+const CKEYS = Object.keys(COLOURS);
+const chex = c => COLOURS[c] || '#4f8cff';
+
+function tintSelect(s) { s.style.borderLeft = '7px solid ' + chex(s.value); }
+function colourSelect(cls, val) {
+  const s = document.createElement('select');
+  s.className = cls;
+  CKEYS.forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = k; s.appendChild(o); });
+  s.value = COLOURS[val] ? val : CKEYS[0];
+  s.onchange = () => { tintSelect(s); calcInstall(); };
+  tintSelect(s);
+  return s;
+}
+function labelledField(labelText, node) {
+  const g = document.createElement('div'); g.className = 'fg';
+  const l = document.createElement('label'); l.textContent = labelText;
+  g.append(l, node);
+  return g;
+}
+function numInput(cls, value, placeholder) {
+  const i = document.createElement('input');
+  i.type = 'number'; i.step = 'any'; i.inputMode = 'decimal';
+  i.className = cls; i.autocomplete = 'off';
+  if (placeholder) i.placeholder = placeholder;
+  if (value !== undefined && value !== null && value !== '') i.value = value;
+  i.oninput = calcInstall;
+  return i;
+}
+
+function addPiezoRow(id, depth, colour) {
+  const wrap = gel('gi-rows');
+  const n = wrap.children.length + 1;
+  const row = document.createElement('div');
+  row.className = 'prow';
+
+  const idInp = document.createElement('input');
+  idInp.type = 'text'; idInp.className = 'gi-id'; idInp.autocomplete = 'off';
+  idInp.value = id ?? `PZ${n}`;
+  idInp.oninput = calcInstall;
+
+  const x = document.createElement('button');
+  x.className = 'xbtn'; x.innerHTML = '&#215;'; x.title = 'Remove';
+  x.onclick = () => { row.remove(); calcInstall(); };
+
+  row.append(
+    labelledField('Piezo ID', idInp),
+    labelledField('Target depth (mbgl)', numInput('gi-d', depth, 'e.g. 12.5')),
+    labelledField('Marker colour', colourSelect('gi-c', colour || CKEYS[(n-1) % CKEYS.length])),
+    x
+  );
+  wrap.appendChild(row);
+  calcInstall();
+}
+
+function clearPiezoRows() {
+  if (!confirm('Remove all piezo rows?')) return;
+  gel('gi-rows').innerHTML = '';
+  calcInstall();
+}
+
+function spaceEvenly() {
+  const rows = [...gel('gi-rows').children];
+  if (!rows.length) { toast('Add some piezo rows first', 'err'); return; }
+  const toe = gnum('gi-toe', gnum('gi-bh', 0));
+  const step = toe / (rows.length + 1);
+  rows.forEach((r,i) => { r.querySelector('.gi-d').value = f2(toe - step*(i+1)); });
+  calcInstall();
+}
+
+function readPiezoRows() {
+  return [...gel('gi-rows').children].map((r,i) => ({
+    order: i + 1,
+    id: r.querySelector('.gi-id').value.trim() || `PZ${i+1}`,
+    colour: r.querySelector('.gi-c').value,
+    depth: parseFloat(r.querySelector('.gi-d').value)
+  }));
+}
+
+function readAlc() {
+  return [...gel('gi-alc-rows').children].map((r,i) => ({
+    n: i + 1,
+    od: parseFloat(r.querySelector('.gi-aod').value) || 0,
+    toe: parseFloat(r.querySelector('.gi-atoe').value),
+    colour: r.querySelector('.gi-ac').value
+  }));
+}
+
+function renderAlcRows(saved) {
+  const n = Math.max(0, Math.min(12, Math.round(gnum('gi-nalc', 0))));
+  const cur = saved || readAlc();
+  const wrap = gel('gi-alc-rows');
+  wrap.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const c = cur[i] || {};
+    const row = document.createElement('div'); row.className = 'arow';
+    const lab = document.createElement('div'); lab.className = 'alab'; lab.textContent = `Alcathene ${i+1}`;
+    row.append(
+      lab,
+      labelledField('OD (mm)', numInput('gi-aod', c.od ?? 20)),
+      labelledField('Toe depth (mbgl)', numInput('gi-atoe', isFinite(c.toe) ? c.toe : '', 'blank = BH depth')),
+      labelledField('Marked colour', colourSelect('gi-ac', c.colour || CKEYS[i % CKEYS.length]))
+    );
+    wrap.appendChild(row);
+  }
+  calcInstall();
+}
+
+function alcVolume() {
+  const bh = gnum('gi-bh', 0);
+  return readAlc().reduce((s,a) => s + areaLpm(a.od) * Math.max(0, isFinite(a.toe) ? a.toe : bh), 0);
+}
+
+function calcInstall() {
+  const bh     = gnum('gi-bh', NaN);
+  const L      = gnum('gi-len', NaN);
+  const stick  = gnum('gi-stick', 0);
+  const toe    = gnum('gi-toe', bh);
+  const clr    = gnum('gi-clear', 0);
+  const topNum = gel('gi-order').value === 'top';
+  const errBox = gel('gi-err');
+  const rows   = readPiezoRows();
+
+  savePlan();
+
+  const errs = [];
+  if (!isFinite(bh) || bh <= 0) errs.push('Enter a valid borehole depth.');
+  if (!isFinite(L) || L <= 0)   errs.push('Enter a valid trimmy piece length.');
+  if (isFinite(toe) && isFinite(bh) && toe > bh)
+    errs.push(`String toe (${f2(toe)} m) is deeper than the borehole (${f2(bh)} m).`);
+
+  if (errs.length) {
+    errBox.style.display = 'block';
+    errBox.innerHTML = errs.map(e => '&bull; ' + esc(e)).join('<br>');
+    gel('gi-summary').innerHTML = '';
+    gel('gi-tbody').innerHTML = '';
+    gel('gi-svg').innerHTML = '';
+    gel('gi-warn').innerHTML = '';
+    return;
+  }
+  errBox.style.display = 'none';
+
+  const stringLen   = toe + stick;
+  const nPieces     = Math.max(1, Math.ceil(stringLen / L - 1e-9));
+  const suppliedLen = nPieces * L;
+  const offcut      = suppliedLen - stringLen;
+
+  const dia  = gnum('gi-dia', 0);
+  const galv = gnum('gi-galvod', 0);
+  const alc  = readAlc().map(a => ({...a, toe: isFinite(a.toe) ? a.toe : bh}));
+  const holeLpm  = areaLpm(dia);
+  const galvVol  = areaLpm(galv) * toe;
+  const alcVol   = alc.reduce((s,a) => s + areaLpm(a.od) * Math.max(0, a.toe), 0);
+  const groutVol = Math.max(0, holeLpm * bh - galvVol - alcVol);
+  const bundleW  = galv + alc.reduce((s,a) => s + a.od, 0);
+
+  gel('gi-fit').innerHTML = dia > 0
+    ? `Bundle across the hole is about ${f2(bundleW)} mm in a ${f2(dia)} mm hole &nbsp;&middot;&nbsp; hole holds ${f2(holeLpm)} L/m`
+      + (bundleW > dia*0.85 ? ' <span style="color:var(--warn)">&mdash; tight, check it will pass</span>' : '')
+    : '';
+
+  const valid = rows.filter(p => isFinite(p.depth)).sort((a,b) => a.depth - b.depth);
+  const warns = [];
+  const seen = new Set();
+
+  alc.filter(a => a.toe > bh).forEach(a =>
+    warns.push(`Alcathene ${a.n} toe (${f2(a.toe)} m) is below the borehole base.`));
+
+  valid.forEach((p,i) => {
+    p.no = i + 1;
+    p.aboveToe = toe - p.depth;
+    if (p.depth < 0) { p.bad = 'above ground level'; return; }
+    if (p.depth > toe) { p.bad = 'below the string toe'; return; }
+    const idx = Math.min(nPieces, Math.floor(p.aboveToe / L + 1e-9) + 1);
+    p.piece = topNum ? (nPieces - idx + 1) : idx;
+    p.fromPieceToe = p.aboveToe - (idx - 1) * L;
+    p.fromPieceTop = L - p.fromPieceToe;
+    p.toJoint = Math.min(idx === 1 ? Infinity : p.fromPieceToe, idx === nPieces ? Infinity : p.fromPieceTop);
+    if (isFinite(p.toJoint) && p.toJoint < clr)
+      warns.push(`${p.id} at ${f2(p.depth)} m is only ${f2(p.toJoint)} m from a coupling on piece ${p.piece}.`);
+    const key = f2(p.depth);
+    if (seen.has(key)) warns.push(`Two piezos share the depth ${key} mbgl.`);
+    seen.add(key);
+  });
+  valid.filter(p => p.bad).forEach(p => warns.push(`${p.id} at ${f2(p.depth)} m is ${p.bad}.`));
+
+  const good = valid.filter(p => !p.bad);
+  const deepest = good.length ? good[good.length-1].depth : 0;
+  const shallowest = good.length ? good[0].depth : 0;
+
+  gel('gi-summary').innerHTML = `
+    <div class="row"><span class="k">Total piezometers</span><span class="v big">${good.length}</span></div>
+    <div class="row"><span class="k">Borehole depth</span><span class="v">${f2(bh)} m</span></div>
+    <div class="row"><span class="k">String toe depth</span><span class="v">${f2(toe)} m</span></div>
+    <div class="row"><span class="k">Stickup above GL</span><span class="v">${f2(stick)} m</span></div>
+    <div class="row"><span class="k">Total string length</span><span class="v">${f2(stringLen)} m</span></div>
+    <div class="row sep"><span class="k">Trimmy pieces at ${f2(L)} m</span><span class="v big">${nPieces}</span></div>
+    <div class="row"><span class="k">Trimmy supplied length</span><span class="v">${f2(suppliedLen)} m</span></div>
+    <div class="row"><span class="k">Offcut from top piece</span><span class="v">${f2(offcut)} m</span></div>
+    <div class="row"><span class="k">Couplings / joints</span><span class="v">${Math.max(0, nPieces-1)}</span></div>
+    <div class="row sep"><span class="k">Hole / galv diameter</span><span class="v">${f2(dia)} / ${f2(galv)} mm</span></div>
+    <div class="row"><span class="k">Alcathene trimmies</span><span class="v">${alc.length
+      ? esc(alc.map(a => `${f2(a.od)} mm ${a.colour} to ${f2(a.toe)} m`).join(', '))
+      : 'none'}</span></div>
+    <div class="row"><span class="k">Grout volume (hole less trimmies)</span><span class="v hi">${f2(groutVol)} L</span></div>
+    ${good.length ? `<div class="row sep"><span class="k">Shallowest / deepest piezo</span><span class="v">${f2(shallowest)} / ${f2(deepest)} m</span></div>` : ''}
+    ${good.length ? `<div class="row"><span class="k">Sump below deepest piezo</span><span class="v">${f2(bh - deepest)} m</span></div>` : ''}`;
+
+  gel('gi-warn').innerHTML = warns.length
+    ? `<div class="al al-warn" style="margin-top:12px;margin-bottom:0">${warns.map(w => esc(w)).join('<br>')}</div>`
+    : (good.length ? `<div class="al al-ok" style="margin-top:12px;margin-bottom:0">All piezos are clear of couplings by at least ${f2(clr)} m.</div>` : '');
+
+  gel('gi-tbody').innerHTML = valid.length ? valid.map(p => p.bad
+    ? `<tr><td>${p.no}</td><td>${esc(p.id)}</td><td>${esc(p.colour)}</td><td>${f2(p.depth)}</td>
+         <td colspan="5" style="color:var(--danger)">Invalid &mdash; ${esc(p.bad)}</td></tr>`
+    : `<tr><td>${p.no}</td><td><strong>${esc(p.id)}</strong></td>
+         <td><span class="swatch" style="background:${chex(p.colour)}"></span>${esc(p.colour)}</td>
+         <td>${f2(p.depth)}</td><td>${f2(p.aboveToe)}</td>
+         <td><span class="badge">Piece ${p.piece}</span></td>
+         <td>${f2(p.fromPieceToe)}</td><td>${f2(p.fromPieceTop)}</td>
+         <td${isFinite(p.toJoint) && p.toJoint < clr ? ' style="color:var(--warn);font-weight:700"' : ''}>${isFinite(p.toJoint)?f2(p.toJoint):'\u2014'}</td></tr>`
+    ).join('')
+    : '<tr><td colspan="9" style="color:var(--muted)">No piezo depths entered yet.</td></tr>';
+
+  gel('gi-svg').innerHTML = buildInstallSVG({bh, toe, stick, L, nPieces, dia, galv, alc, groutVol, piezos: good});
+}
+
+/* --- Drawing -------------------------------------------------------------- */
+function niceStep(range, want) {
+  const raw = range / want;
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  for (const m of [1, 2, 2.5, 5, 10]) if (raw <= m*p) return m*p;
+  return 10*p;
+}
+
+function buildInstallSVG(d) {
+  const maxD = Math.max(d.bh, d.toe, 1);
+  // Summary panel sits in the empty column left of the depth axis.
+  const BX = 14, BW = 196;
+  const W = 560, hcx = 322, hw = 32, ax = 252;
+  const plotH = Math.min(840, Math.max(340, maxD * 24));
+  const sc = plotH / maxD;
+  const stickPx = Math.min(60, d.stick * sc);
+  const yG = 62 + stickPx;
+  const legendH = 26 + (d.alc.length + 1) * 14;
+  const H = yG + plotH + 50 + legendH;
+  const y = m => yG + m * sc;
+  const o = [];
+  const P = (...a) => o.push(...a);
+
+  P(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="Segoe UI,Arial,sans-serif">`);
+  P(`<rect width="${W}" height="${H}" fill="#080b11"/>`);
+  P(`<text x="${hcx}" y="26" fill="#8fb8ff" font-size="13" font-weight="700" text-anchor="middle" letter-spacing="1">PIEZOMETER INSTALLATION</text>`);
+
+  // Summary panel
+  const info = [
+    ['Piezometers',    String(d.piezos.length)],
+    ['Borehole depth', `${f2(d.bh)} m`],
+    ['Hole diameter',  `${f2(d.dia)} mm`],
+    ['Galv trimmy OD', `${f2(d.galv)} mm`],
+    ['Trimmy pieces',  `${d.nPieces} \u00d7 ${f2(d.L)} m`],
+    ['String toe',     `${f2(d.toe)} m`],
+    ['Stickup',        `${f2(d.stick)} m`],
+    ['Alcathene lines', d.alc.length ? String(d.alc.length) : 'none'],
+    ['Grout volume',   `${f2(d.groutVol)} L`]
+  ];
+  const BY = 44, BH_ = 26 + info.length * 14 + 8;
+  P(`<rect x="${BX}" y="${BY}" width="${BW}" height="${BH_}" rx="8" fill="#111823" stroke="#26303f" stroke-width="1"/>`);
+  P(`<text x="${BX+12}" y="${BY+18}" fill="#8fb8ff" font-size="8.5" font-weight="700" letter-spacing=".8">SUMMARY</text>`);
+  P(`<line x1="${BX+12}" y1="${BY+23}" x2="${BX+BW-12}" y2="${BY+23}" stroke="#1d2634"/>`);
+  info.forEach(([k,v],i) => {
+    const ry = BY + 38 + i*14;
+    P(`<text x="${BX+12}" y="${ry}" fill="#7c8ba3" font-size="8.5">${k}</text>`);
+    P(`<text x="${BX+BW-12}" y="${ry}" fill="#dbe5f2" font-size="8.5" font-weight="700" text-anchor="end">${v}</text>`);
+  });
+
+  // Depth axis
+  const step = niceStep(maxD, 8);
+  const dp = step % 1 === 0 ? 0 : (step*10 % 1 === 0 ? 1 : 2);
+  P(`<line x1="${ax}" y1="${yG}" x2="${ax}" y2="${y(maxD).toFixed(1)}" stroke="#2b3648" stroke-width="1"/>`);
+  for (let t = 0; t <= maxD + 1e-9; t += step) {
+    const yy = y(t);
+    P(`<line x1="${ax}" y1="${yy.toFixed(1)}" x2="${ax+5}" y2="${yy.toFixed(1)}" stroke="#2b3648"/>`);
+    P(`<text x="${ax-5}" y="${(yy+3).toFixed(1)}" fill="#55637a" font-size="8.5" text-anchor="end">${t.toFixed(dp)}</text>`);
+  }
+  P(`<text x="${ax-5}" y="${yG-9}" fill="#7c8ba3" font-size="8.5" text-anchor="end">mbgl</text>`);
+
+  // Grouted hole
+  P(`<defs><pattern id="gt" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="7" height="7" fill="#1a2231"/><line x1="0" y1="0" x2="0" y2="7" stroke="#2b3648" stroke-width="1.6"/></pattern></defs>`);
+  P(`<rect x="${hcx-hw}" y="${yG}" width="${hw*2}" height="${plotH}" fill="url(#gt)" stroke="#3f4d63" stroke-width="1.2"/>`);
+  const midY = (yG + plotH/2).toFixed(1);
+  P(`<text x="${hcx-hw-10}" y="${midY}" fill="#6b7a92" font-size="8.5" text-anchor="middle" transform="rotate(-90 ${hcx-hw-10} ${midY})">BENTONITE-CEMENT GROUT</text>`);
+
+  // Ground line
+  P(`<line x1="${ax-8}" y1="${yG}" x2="${W-14}" y2="${yG}" stroke="#84cc16" stroke-width="2"/>`);
+  for (let x = ax-8; x < W-14; x += 9)
+    P(`<line x1="${x}" y1="${yG}" x2="${x-6}" y2="${yG+6}" stroke="#4d7c0f" stroke-width="1"/>`);
+  P(`<text x="${W-14}" y="${yG-7}" fill="#84cc16" font-size="9" text-anchor="end">GROUND LEVEL 0.00 m</text>`);
+
+  // Alcathene lines, each to its own toe
+  d.alc.forEach((a,i) => {
+    const side = i % 2 ? 1 : -1;
+    const axx = hcx + side * (9 + Math.floor(i/2) * 7);
+    const at = y(Math.max(0, Math.min(a.toe, maxD)));
+    P(`<line x1="${axx}" y1="${(yG-stickPx).toFixed(1)}" x2="${axx}" y2="${at.toFixed(1)}" stroke="${chex(a.colour)}" stroke-width="1.8" opacity=".9"/>`);
+    P(`<line x1="${axx-3.5}" y1="${at.toFixed(1)}" x2="${axx+3.5}" y2="${at.toFixed(1)}" stroke="${chex(a.colour)}" stroke-width="2.5"/>`);
+  });
+
+  // Galv trimmy string
+  const yToe = y(d.toe);
+  P(`<line x1="${hcx}" y1="${(yG-stickPx).toFixed(1)}" x2="${hcx}" y2="${yToe.toFixed(1)}" stroke="#cbd5e1" stroke-width="3.5" stroke-linecap="round"/>`);
+  if (stickPx > 2) P(`<text x="${hcx+hw+6}" y="${(yG-stickPx+9).toFixed(1)}" fill="#cbd5e1" font-size="8.5">stickup ${f2(d.stick)} m</text>`);
+  P(`<line x1="${hcx-12}" y1="${yToe.toFixed(1)}" x2="${hcx+12}" y2="${yToe.toFixed(1)}" stroke="#cbd5e1" stroke-width="2.5"/>`);
+
+  // Base of hole
+  const yB = y(d.bh);
+  P(`<line x1="${hcx-hw}" y1="${yB.toFixed(1)}" x2="${hcx+hw}" y2="${yB.toFixed(1)}" stroke="#f26d6d" stroke-width="2"/>`);
+  P(`<text x="${hcx+hw+6}" y="${(yB+14).toFixed(1)}" fill="#f26d6d" font-size="9" font-weight="700">BH BASE ${f2(d.bh)} mbgl</text>`);
+  if (Math.abs(d.toe - d.bh) > 0.01)
+    P(`<text x="${hcx+hw+6}" y="${(yToe+3).toFixed(1)}" fill="#93a4bd" font-size="8.5">string toe ${f2(d.toe)} m</text>`);
+
+  // Piezos
+  const lx = hcx + hw + 10;
+  let last = -99;
+  d.piezos.forEach(p => {
+    const py = y(p.depth);
+    const col = chex(p.colour);
+    const ly = Math.max(py, last + 13);
+    last = ly;
+    P(`<path d="M ${hcx+9} ${py.toFixed(1)} L ${lx-4} ${ly.toFixed(1)}" stroke="#2b3648" stroke-width=".9" fill="none"/>`);
+    P(`<circle cx="${hcx}" cy="${py.toFixed(1)}" r="5.5" fill="${col}" stroke="#080b11" stroke-width="1.2"/>`);
+    P(`<text x="${lx}" y="${(ly+3).toFixed(1)}" fill="${col}" font-size="9" font-weight="700">${esc(p.id)} <tspan fill="#93a4bd" font-weight="400">${f2(p.depth)} m \u00b7 ${esc(p.colour)}</tspan></text>`);
+  });
+
+  // Legend
+  const ly0 = yG + plotH + 36;
+  P(`<line x1="${BX}" y1="${ly0-13}" x2="${W-14}" y2="${ly0-13}" stroke="#1d2634"/>`);
+  P(`<text x="${BX}" y="${ly0}" fill="#8fb8ff" font-size="9" font-weight="700" letter-spacing=".5">LEGEND</text>`);
+  let ry = ly0 + 15;
+  const legLine = (col, txt) => {
+    P(`<rect x="${BX+2}" y="${ry-6}" width="12" height="7" rx="1.5" fill="${col}"/>`);
+    P(`<text x="${BX+20}" y="${ry}" fill="#93a4bd" font-size="8.5">${txt}</text>`);
+    ry += 14;
+  };
+  legLine('#cbd5e1', `Galv trimmy \u00b7 ${f2(d.galv)} mm OD \u00b7 toe ${f2(d.toe)} m`);
+  d.alc.forEach(a => legLine(chex(a.colour), `Alcathene ${a.n} \u00b7 ${f2(a.od)} mm OD \u00b7 ${esc(a.colour)} \u00b7 toe ${f2(a.toe)} m`));
+  P(`<text x="${BX}" y="${H-12}" fill="#55637a" font-size="8">Generated ${nowTs()} \u00b7 vertical scale only</text>`);
+  P(`</svg>`);
+  return o.join('');
+}
+
+function downloadInstallSVG() {
+  const svg = gel('gi-svg').innerHTML;
+  if (!svg) { toast('Nothing to export yet', 'err'); return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([svg], {type:'image/svg+xml'}));
+  a.download = `installation_drawing_${S.loggerId||'plan'}.svg`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function printInstallSVG() {
+  const svg = gel('gi-svg').innerHTML;
+  if (!svg) { toast('Nothing to print yet', 'err'); return; }
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Installation drawing</title></head>
+    <body style="margin:0;background:#fff;text-align:center">${svg}</body></html>`);
+  w.document.close();
+  w.focus();
+  w.print();
+}
+function downloadInstallCSV() {
+  const rows = [...gel('gi-tbody').querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.textContent.trim()));
+  if (!rows.length) { toast('Nothing to export yet', 'err'); return; }
+  const hdr = ['No','Piezo_ID','Colour','Depth_mbgl','Above_toe_m','Piece','From_piece_toe_m','From_piece_top_m','Nearest_joint_m'];
+  saveCsv([hdr, ...rows], `installation_schedule_${S.loggerId||'plan'}.csv`);
+}
+
+function savePlan() {
+  try {
+    localStorage.setItem(IK, JSON.stringify({
+      bh: gel('gi-bh').value, len: gel('gi-len').value, stick: gel('gi-stick').value,
+      toe: gel('gi-toe').value, clear: gel('gi-clear').value, order: gel('gi-order').value,
+      dia: gel('gi-dia').value, galvod: gel('gi-galvod').value, nalc: gel('gi-nalc').value,
+      alc: readAlc(),
+      piezos: readPiezoRows().map(p => ({id:p.id, depth: isFinite(p.depth) ? p.depth : '', colour:p.colour}))
+    }));
+  } catch {}
+}
+
+let installReady = false;
+function initInstall() {
+  if (installReady) return;
+  installReady = true;
+  let p = null;
+  try { p = JSON.parse(localStorage.getItem(IK) || 'null'); } catch {}
+  if (p) {
+    ['bh','len','stick','toe','clear','dia','galvod','nalc'].forEach(k => {
+      if (p[k] !== undefined) gel('gi-'+k).value = p[k];
+    });
+    if (p.order) gel('gi-order').value = p.order;
+  }
+  renderAlcRows((p && p.alc) || []);
+  const list = (p && p.piezos && p.piezos.length) ? p.piezos
+    : [{id:'PZ1',depth:''},{id:'PZ2',depth:''},{id:'PZ3',depth:''}];
+  list.forEach(x => addPiezoRow(x.id, x.depth, x.colour));
+  calcInstall();
+}
+
+/* ==========================================================================
+   Grouting
+   ========================================================================== */
+const SG_CEM = 3.15, SG_BEN = 2.60;
+const MIXES = {
+  A: {water:113.6, cement:42.6, bentonite:11.3,
+      note:'Mikkelsen &amp; Green Mix A. Water/cement about 2.7 by mass. Suits medium to hard soils and weak rock; the set grout is a soft solid of similar stiffness to stiff clay.'},
+  B: {water:283.9, cement:42.6, bentonite:17.7,
+      note:'Mikkelsen &amp; Green Mix B. Water/cement about 6.6 by mass. For soft soils; lower modulus, and bleed is controlled by the bentonite dose.'},
+  C: {water:63.9,  cement:42.6, bentonite:2.6,
+      note:'Stiff cement-bentonite at water/cement 1.5. Stronger than the standard piezometer mixes, so only use it where the ground is stiff or rock.'},
+  D: {water:100,   cement:0,    bentonite:6.0,
+      note:'Bentonite-only slurry at 6% solids by mass. No cement, so it suits short seals but is prone to bleed and needs a long hydration time.'},
+  X: {note:'Custom batch. Enter your own water, cement and bentonite quantities per batch.'}
+};
+
+function applyMixPreset() {
+  const k = gel('gm-preset').value;
+  const m = MIXES[k];
+  if (k !== 'X') {
+    gel('gm-water').value = m.water;
+    gel('gm-cem').value = m.cement;
+    gel('gm-ben').value = m.bentonite;
+  }
+  calcMix();
+}
+function markCustom() { gel('gm-preset').value = 'X'; }
+
+function calcGroutVol() {
+  const dia   = gnum('gg-dia', 0) / 1000;
+  const base  = gnum('gg-base', 0);
+  const top   = gnum('gg-top', 0);
+  const galv  = gnum('gg-galv', 0);
+  const alcL  = gnum('gg-alc', 0);
+  const othL  = gnum('gg-other', 0);
+  const waste = gnum('gg-waste', 0);
+  const len   = base - top;
+  const out   = gel('gg-vol');
+
+  if (!(dia > 0) || !(len > 0)) {
+    out.innerHTML = '<div class="row"><span class="k">Enter a hole diameter and a grout base deeper than the grout top.</span></div>';
+    return;
+  }
+  const holeLpm = Math.PI/4 * dia*dia * 1000;
+  const volHole = holeLpm * len;
+  const volGalv = areaLpm(galv) * len;
+  const volOth  = othL * len;
+  const volDisp = Math.min(volHole, volGalv + alcL + volOth);
+  const net     = volHole - volDisp;
+  const design  = net * (1 + waste/100);
+
+  out.innerHTML = `
+    <div class="row"><span class="k">Grouted length</span><span class="v">${f2(len)} m</span></div>
+    <div class="row"><span class="k">Hole volume per metre</span><span class="v">${f2(holeLpm)} L/m</span></div>
+    <div class="row"><span class="k">Total hole volume</span><span class="v">${f2(volHole)} L</span></div>
+    <div class="row"><span class="k">Galv trimmy (${f2(galv)} mm)</span><span class="v">\u2212${f2(volGalv)} L</span></div>
+    <div class="row"><span class="k">Alcathene lines</span><span class="v">\u2212${f2(alcL)} L</span></div>
+    <div class="row"><span class="k">Other displacement</span><span class="v">\u2212${f2(volOth)} L</span></div>
+    <div class="row"><span class="k">Net annulus volume</span><span class="v">${f2(net)} L</span></div>
+    <div class="row sep"><span class="k">Design volume (+${f2(waste)}%)</span><span class="v big">${f2(design)} L</span></div>
+    <div class="row"><span class="k">Design volume</span><span class="v">${(design/1000).toFixed(3)} m\u00b3</span></div>`;
+  out.dataset.design = design;
+}
+
+function importFromPlanner(notify) {
+  initInstall();
+  gel('gg-dia').value  = gel('gi-dia').value;
+  gel('gg-base').value = gel('gi-bh').value;
+  gel('gg-galv').value = gel('gi-galvod').value;
+  gel('gg-alc').value  = f2(alcVolume());
+  calcGroutVol();
+  if (notify) toast('Imported from planner', 'ok');
+}
+
+function useVolInMix() {
+  const d = parseFloat(gel('gg-vol').dataset.design || '');
+  if (!isFinite(d)) { toast('Calculate a borehole volume first', 'err'); return; }
+  gel('gm-target').value = f2(d);
+  calcMix();
+  gel('gm-out').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function calcMix() {
+  const water  = gnum('gm-water', 0), cem = gnum('gm-cem', 0), ben = gnum('gm-ben', 0);
+  const target = gnum('gm-target', 0);
+  const cbag   = gnum('gm-cembag', 20), bbag = gnum('gm-benbag', 25);
+  const roundUp = gel('gm-round').value === 'up';
+  const out = gel('gm-out');
+
+  gel('gm-note').innerHTML = MIXES[gel('gm-preset').value].note;
+
+  const batchYield = water + cem/SG_CEM + ben/SG_BEN;
+  if (!(batchYield > 0) || !(target > 0)) {
+    out.innerHTML = '<div class="row"><span class="k">Enter a batch recipe and a target volume.</span></div>';
+    return;
+  }
+  const exact   = target / batchYield;
+  const batches = roundUp ? Math.ceil(exact - 1e-9) : exact;
+  const tw = water*batches, tc = cem*batches, tb = ben*batches;
+  const mixed = batchYield*batches;
+  const batchMass = water + cem + ben;
+  const wc = cem > 0 ? water/cem : NaN;
+
+  out.innerHTML = `
+    <div class="row"><span class="k">Batch yield</span><span class="v">${f2(batchYield)} L</span></div>
+    <div class="row"><span class="k">Water : cement by mass</span><span class="v">${isFinite(wc)?f2(wc)+' : 1':'no cement'}</span></div>
+    <div class="row"><span class="k">Grout density</span><span class="v">${f2(batchMass/batchYield)} kg/L</span></div>
+    <div class="row"><span class="k">Batches needed (exact)</span><span class="v">${exact.toFixed(2)}</span></div>
+    <div class="row sep"><span class="k">Batches to mix</span><span class="v big">${roundUp?batches:exact.toFixed(2)}</span></div>
+    <div class="row"><span class="k">Water</span><span class="v hi">${f2(tw)} L</span></div>
+    <div class="row"><span class="k">Cement</span><span class="v hi">${f2(tc)} kg${cbag>0?` (${Math.ceil(tc/cbag - 1e-9)} \u00d7 ${f2(cbag)} kg bags)`:''}</span></div>
+    <div class="row"><span class="k">Bentonite</span><span class="v hi">${f2(tb)} kg${bbag>0?` (${Math.ceil(tb/bbag - 1e-9)} \u00d7 ${f2(bbag)} kg bags)`:''}</span></div>
+    <div class="row"><span class="k">Total wet mass</span><span class="v">${f2(batchMass*batches)} kg</span></div>
+    <div class="row sep"><span class="k">Grout produced</span><span class="v big">${f2(mixed)} L</span></div>
+    <div class="row"><span class="k">Surplus over target</span><span class="v">${f2(mixed-target)} L</span></div>`;
+}
+
+let groutReady = false;
+function initGrout() {
+  if (groutReady) return;
+  groutReady = true;
+  importFromPlanner(false);
+  calcMix();
+}
+</script>
 </body>
 </html>
